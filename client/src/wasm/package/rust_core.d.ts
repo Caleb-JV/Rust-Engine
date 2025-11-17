@@ -1,14 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
-export function greet(): string;
 export function add(a: number, b: number): number;
+export function greet(): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly greet: () => [number, number];
   readonly add: (a: number, b: number) => number;
+  readonly greet: () => [number, number];
   readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_start: () => void;

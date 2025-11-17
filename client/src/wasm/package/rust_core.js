@@ -1,5 +1,15 @@
 let wasm;
 
+/**
+ * @param {number} a
+ * @param {number} b
+ * @returns {number}
+ */
+export function add(a, b) {
+    const ret = wasm.add(a, b);
+    return ret;
+}
+
 let cachedUint8ArrayMemory0 = null;
 
 function getUint8ArrayMemory0() {
@@ -43,16 +53,6 @@ export function greet() {
     } finally {
         wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
-}
-
-/**
- * @param {number} a
- * @param {number} b
- * @returns {number}
- */
-export function add(a, b) {
-    const ret = wasm.add(a, b);
-    return ret;
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
