@@ -131,3 +131,17 @@ target/
 # Backup files
 *.bak
 *.backup
+
+
+
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+
+rust-core/target/
+russt-core/Cargo.lock
+
+
+./client/src/wasm
+./client/package-lock.json

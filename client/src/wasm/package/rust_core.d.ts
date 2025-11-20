@@ -1,24 +1,25 @@
 /* tslint:disable */
 /* eslint-disable */
-/**
- * ------------------------------------------------------------------
- *   Filter stored Arrow batches
- * ------------------------------------------------------------------
- */
-export function aggregate(col: string, op: string, threshold: number): Uint8Array;
+export function get_data(col_names: string): Uint8Array;
+export function aggregate(col_names: string, aggregation_type: string): any;
+export function get_meta_data(): any;
 /**
  * ------------------------------------------------------------------
  *   CSV → Arrow IPC → store schema + batches
  * ------------------------------------------------------------------
  */
-export function csvtoarrow(bytes: Uint8Array): Uint8Array;
+export function seed(bytes: Uint8Array): void;
+export function get_filter_options(col_name: string): any;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly aggregate: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
-  readonly csvtoarrow: (a: number, b: number) => [number, number, number, number];
+  readonly aggregate: (a: number, b: number, c: number, d: number) => [number, number, number];
+  readonly get_data: (a: number, b: number) => [number, number, number, number];
+  readonly get_filter_options: (a: number, b: number) => [number, number, number];
+  readonly get_meta_data: () => [number, number, number];
+  readonly seed: (a: number, b: number) => [number, number];
   readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

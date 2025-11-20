@@ -1,5 +1,11 @@
 import { useState } from "react";
-import init, { csvtoarrow, aggregate } from "./wasm/package/rust_core";
+import init, {
+  seed,
+  get_meta_data,
+  get_data,
+  aggregate,
+  get_filter_options,
+} from "./wasm/package/rust_core";
 import { tableFromIPC, Table } from "apache-arrow";
 
 type Row = Record<string, string | number | boolean | null>;
@@ -18,18 +24,25 @@ const App: React.FC = () => {
 
     const bytes = new Uint8Array(await file.arrayBuffer());
 
-    const arrowBuffer: Uint8Array | number[] = csvtoarrow(bytes);
+    seed(bytes);
 
-    console.log(arrowBuffer);
+    const metadata = await get_meta_data();
 
-    const arr =
-      arrowBuffer instanceof Uint8Array
-        ? arrowBuffer
-        : new Uint8Array(arrowBuffer);
+    console.log(metadata);
+
+    const arr = get_data("");
+
+    // console.log(aggregate("votes", "sum"));
+
+    console.log(get_filter_options("College Name"));
 
     const table: Table = tableFromIPC(arr);
 
-    console.log(table.schema.fields.length);
+    const vanakkam = table.toString();
+
+    console.log(vanakkam.length);
+
+    console.log(table.toString());
 
     const colNames = table.schema.fields.map((f) => f.name);
     setColumns(colNames);
@@ -46,13 +59,6 @@ const App: React.FC = () => {
     }
 
     setRows(parsedRows);
-  };
-
-  const aggregate_fxn = async () => {
-    await init();
-    const result = aggregate("votes", "greater", 1000);
-
-    console.log("Aggregate Result:", result);
   };
 
   return (
@@ -137,7 +143,6 @@ const App: React.FC = () => {
           Upload a CSV file to preview its data.
         </p>
       )}
-      <button onClick={aggregate_fxn}>aggregate</button>
     </div>
   );
 };
