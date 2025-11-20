@@ -1,15 +1,5 @@
 let wasm;
 
-/**
- * @param {number} a
- * @param {number} b
- * @returns {number}
- */
-export function add(a, b) {
-    const ret = wasm.add(a, b);
-    return ret;
-}
-
 let cachedUint8ArrayMemory0 = null;
 
 function getUint8ArrayMemory0() {
@@ -105,26 +95,47 @@ function getArrayU8FromWasm0(ptr, len) {
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 /**
- * ------------------------------------------------------------------
- *   Filter stored Arrow batches
- * ------------------------------------------------------------------
- * @param {string} col
- * @param {string} op
- * @param {number} threshold
+ * @param {string} col_names
  * @returns {Uint8Array}
  */
-export function aggregate(col, op, threshold) {
-    const ptr0 = passStringToWasm0(col, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function get_data(col_names) {
+    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(op, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.aggregate(ptr0, len0, ptr1, len1, threshold);
+    const ret = wasm.get_data(ptr0, len0);
     if (ret[3]) {
         throw takeFromExternrefTable0(ret[2]);
     }
-    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v3;
+    return v2;
+}
+
+/**
+ * @param {string} col_names
+ * @param {string} aggregation_type
+ * @returns {any}
+ */
+export function aggregate(col_names, aggregation_type) {
+    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(aggregation_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.aggregate(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @returns {any}
+ */
+export function get_meta_data() {
+    const ret = wasm.get_meta_data();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 function passArray8ToWasm0(arg, malloc) {
@@ -138,18 +149,28 @@ function passArray8ToWasm0(arg, malloc) {
  *   CSV → Arrow IPC → store schema + batches
  * ------------------------------------------------------------------
  * @param {Uint8Array} bytes
- * @returns {Uint8Array}
  */
-export function csvtoarrow(bytes) {
+export function seed(bytes) {
     const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.csvtoarrow(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
+    const ret = wasm.seed(ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
     }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
+}
+
+/**
+ * @param {string} col_name
+ * @returns {any}
+ */
+export function get_filter_options(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
@@ -195,6 +216,11 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbg_new_a7442b4b19c1a356 = function(arg0, arg1) {
         const ret = new Error(getStringFromWasm0(arg0, arg1));
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_2241b6af4c4b2941 = function(arg0, arg1) {
+        // Cast intrinsic for `Ref(String) -> Externref`.
+        const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {

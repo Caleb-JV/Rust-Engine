@@ -669,6 +669,7 @@ dependencies = [
  "arrow-schema",
  "js-sys",
  "once_cell",
+ "serde_json",
  "wasm-bindgen",
 ]
 
