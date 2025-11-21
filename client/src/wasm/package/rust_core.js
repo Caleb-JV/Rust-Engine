@@ -89,6 +89,19 @@ function takeFromExternrefTable0(idx) {
     wasm.__externref_table_dealloc(idx);
     return value;
 }
+/**
+ * @param {string} col_name
+ * @returns {any}
+ */
+export function get_filter_options(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
 
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
@@ -157,20 +170,6 @@ export function seed(bytes) {
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
-}
-
-/**
- * @param {string} col_name
- * @returns {any}
- */
-export function get_filter_options(col_name) {
-    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_filter_options(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);

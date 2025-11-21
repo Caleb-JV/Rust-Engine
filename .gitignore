@@ -21,7 +21,6 @@
 .env.production.local
 
 # IDE files
-.vscode/settings.json
 .idea/
 *.swp
 *.swo
@@ -110,7 +109,6 @@ temp/
 .vercel
 
 # Editor and OS files
-.vscode/
 .idea/
 *.swp
 *.swo

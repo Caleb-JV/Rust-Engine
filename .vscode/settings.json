@@ -1,0 +1,20 @@
+{
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "cSpell.words": [
+        "contenteditable",
+        "noninteractive",
+        "seperately",
+        "XVIZ"
+    ],
+    "files.associations": {
+        "*.css": "tailwindcss",
+        ".env*": "plaintext"
+    },
+}

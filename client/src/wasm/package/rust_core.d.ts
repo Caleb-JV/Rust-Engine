@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export function get_filter_options(col_name: string): any;
 export function get_data(col_names: string): Uint8Array;
 export function aggregate(col_names: string, aggregation_type: string): any;
 export function get_meta_data(): any;
@@ -9,7 +10,6 @@ export function get_meta_data(): any;
  * ------------------------------------------------------------------
  */
 export function seed(bytes: Uint8Array): void;
-export function get_filter_options(col_name: string): any;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
