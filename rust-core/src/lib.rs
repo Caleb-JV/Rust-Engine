@@ -20,7 +20,7 @@ mod types;
 
 // Imports from modules
 use error::{js_err, js_err_arrow};
-use helpers::{encode_ipc, parse_cols, to_simple_type};
+use helpers::{encode_ipc, to_simple_type};
 use query_types::DataQuery;
 use storage::{STORED_BATCHES, STORED_SCHEMA};
 
@@ -92,71 +92,9 @@ pub fn get_meta_data() -> Result<JsValue, JsValue> {
 }
 
 
-#[wasm_bindgen]
-pub fn get_data(col_names: &str) -> Result<Vec<u8>, JsValue> {
-    // Load stored schema and batches
-    let schema_opt = STORED_SCHEMA.lock().unwrap().clone();
-    let batches_opt = STORED_BATCHES.lock().unwrap().clone();
-
-    let schema = match schema_opt {
-        Some(s) => s,
-        None => return Err(js_err("No schema stored. Call csvtoarrow() first.")),
-    };
-
-    let batches = match batches_opt {
-        Some(b) => b,
-        None => return Err(js_err("No batches stored.")),
-    };
-
-    // Parse requested columns
-    let cols = parse_cols(col_names);
-
-    // If empty → return all original batches as IPC
-    if cols.is_empty() {
-        return encode_ipc(&schema, &batches);
-    }
-
-    // Validate & determine column indices
-    let mut indices = Vec::new();
-
-    for name in &cols {
-        match schema.index_of(name) {
-            Ok(i) => indices.push(i),
-            Err(_) => return Err(js_err(&format!("Column not found: {}", name))),
-        }
-    }
-
-    // Build projected schema
-    let projected_fields = indices
-        .iter()
-        .map(|i| schema.field(*i).clone())
-        .collect::<Vec<_>>();
-
-    let projected_schema: SchemaRef = Arc::new(Schema::new(projected_fields));
-
-    // Project each RecordBatch using take()
-    let mut projected_batches = Vec::new();
-
-    for batch in batches {
-        // Slice columns
-        let cols = indices
-            .iter()
-            .map(|i| batch.column(*i).clone())
-            .collect::<Vec<_>>();
-
-        let projected = RecordBatch::try_new(projected_schema.clone(), cols)
-            .map_err(js_err_arrow)?;
-
-        projected_batches.push(projected);
-    }
-
-    // Encode into IPC
-    encode_ipc(&projected_schema, &projected_batches)
-}
-
 /// Advanced get_data with filters, sorting, and pivot support
 #[wasm_bindgen]
-pub fn get_data_advanced(query_json: &str) -> Result<Vec<u8>, JsValue> {
+pub fn get_data(query_json: &str) -> Result<Vec<u8>, JsValue> {
     // Parse query JSON
     let query: DataQuery = serde_json::from_str(query_json)
         .map_err(|e| js_err(&format!("Invalid query JSON: {}", e)))?;
@@ -295,7 +233,7 @@ pub fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub fn get_data_advanced_async(query_json: String) -> js_sys::Promise {
     future_to_promise(async move {
-        let result = get_data_advanced(&query_json)?;
+        let result = get_data(&query_json)?;
         Ok(js_sys::Uint8Array::from(&result[..]).into())
     })
 }

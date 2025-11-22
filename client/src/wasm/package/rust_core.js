@@ -167,11 +167,12 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 /**
- * @param {string} col_names
+ * Advanced get_data with filters, sorting, and pivot support
+ * @param {string} query_json
  * @returns {Uint8Array}
  */
-export function get_data(col_names) {
-    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function get_data(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.get_data(ptr0, len0);
     if (ret[3]) {
@@ -194,20 +195,35 @@ export function get_meta_data() {
 }
 
 /**
- * Advanced get_data with filters, sorting, and pivot support
- * @param {string} query_json
- * @returns {Uint8Array}
+ * @param {string} col_names
+ * @param {string} aggregation_type
+ * @returns {any}
  */
-export function get_data_advanced(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function aggregate(col_names, aggregation_type) {
+    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_advanced(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
+    const ptr1 = passStringToWasm0(aggregation_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.aggregate(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
     }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Async version of aggregate
+ * @param {string} col_names
+ * @param {string} aggregation_type
+ * @returns {Promise<any>}
+ */
+export function aggregate_async(col_names, aggregation_type) {
+    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(aggregation_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.aggregate_async(ptr0, len0, ptr1, len1);
+    return ret;
 }
 
 /**
@@ -235,21 +251,6 @@ export function get_data_advanced_async(query_json) {
 }
 
 /**
- * Async version of aggregate
- * @param {string} col_names
- * @param {string} aggregation_type
- * @returns {Promise<any>}
- */
-export function aggregate_async(col_names, aggregation_type) {
-    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(aggregation_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.aggregate_async(ptr0, len0, ptr1, len1);
-    return ret;
-}
-
-/**
  * @param {string} col_name
  * @returns {any}
  */
@@ -257,23 +258,6 @@ export function get_filter_options(col_name) {
     const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.get_filter_options(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
-/**
- * @param {string} col_names
- * @param {string} aggregation_type
- * @returns {any}
- */
-export function aggregate(col_names, aggregation_type) {
-    const ptr0 = passStringToWasm0(col_names, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(aggregation_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.aggregate(ptr0, len0, ptr1, len1);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -414,8 +398,8 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
-    imports.wbg.__wbindgen_cast_e92dd810cff2313c = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 4441, function: Function { arguments: [Externref], shim_idx: 4442, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    imports.wbg.__wbindgen_cast_b90921cda0bf8181 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 4440, function: Function { arguments: [Externref], shim_idx: 4441, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
         const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h56051a08f764ac79, wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8);
         return ret;
     };

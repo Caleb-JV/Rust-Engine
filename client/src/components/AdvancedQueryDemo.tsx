@@ -5,10 +5,11 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select } from './ui/select';
+import type { TableData } from '../types';
 
 export function AdvancedQueryDemo() {
     const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<TableData | { error: string } | { filterOptions: unknown } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Filter state
@@ -35,7 +36,7 @@ export function AdvancedQueryDemo() {
     const addFilter = () => {
         if (!filterColumn) return;
 
-        let value: any = filterValue;
+        let value: string | number | boolean | string[] | { min: number; max: number } = filterValue;
 
         // Parse value based on operator
         if (filterOperator === 'in' || filterOperator === 'notin') {
@@ -119,8 +120,8 @@ export function AdvancedQueryDemo() {
             console.log('Executing query:', query);
             const data = await dataService.getDataAdvancedAsync(query);
             setResult(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setLoading(false);
         }
@@ -153,8 +154,8 @@ export function AdvancedQueryDemo() {
             console.log('Test query:', query);
             const data = await dataService.getDataAdvancedAsync(query);
             setResult(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setLoading(false);
         }
@@ -185,8 +186,8 @@ export function AdvancedQueryDemo() {
             console.log('Sort test query:', query);
             const data = await dataService.getDataAdvancedAsync(query);
             setResult(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setLoading(false);
         }
@@ -220,8 +221,8 @@ export function AdvancedQueryDemo() {
             console.log('Pivot test query:', query);
             const data = await dataService.getDataAdvancedAsync(query);
             setResult(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setLoading(false);
         }
@@ -241,8 +242,8 @@ export function AdvancedQueryDemo() {
 
             const options = await dataService.getFilterOptions(firstCol);
             setResult({ filterOptions: options });
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setLoading(false);
         }
@@ -404,7 +405,7 @@ export function AdvancedQueryDemo() {
                             <div className="bg-gray-50 p-4 rounded overflow-auto max-h-96">
                                 <pre className="text-xs">{JSON.stringify(result, null, 2)}</pre>
                             </div>
-                            {result.rows && (
+                            {'rows' in result && result.rows && (
                                 <div className="text-sm text-gray-600">
                                     Showing {result.rows.length} rows × {result.columns?.length || 0} columns
                                 </div>

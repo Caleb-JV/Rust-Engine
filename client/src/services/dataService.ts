@@ -1,13 +1,5 @@
 import { tableFromIPC, Table } from 'apache-arrow';
-import init, {
-    seed,
-    get_meta_data,
-    get_data,
-    get_data_advanced,
-    get_data_advanced_async,
-    aggregate_async,
-    get_filter_options_async,
-} from '../wasm/package/rust_core';
+import init, { seed, get_meta_data, get_data, get_data_advanced_async, aggregate_async, get_filter_options_async } from '../wasm/package/rust_core';
 import type { Row, TableData } from '../types';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
@@ -141,48 +133,11 @@ class DataService {
      * Get data from Rust based on current pivot/filter configuration
      * Called when pivot/filter changes or "Apply" is clicked
      */
-    async getData(columnNames: string[] = []): Promise<TableData> {
-        const store = useFieldsStore.getState();
-
-        try {
-            store.setProcessingStatus('processing');
-
-            // Get data from Rust (pass column names as comma-separated string)
-            const colNamesStr = columnNames.join(',');
-            const arr = get_data(colNamesStr);
-            const table: Table = tableFromIPC(arr);
-
-            // Parse to TableData format
-            const colNames = table.schema.fields.map((f) => f.name);
-            const parsedRows: Row[] = [];
-
-            for (let i = 0; i < table.numRows; i++) {
-                const row: Row = {};
-                for (const col of colNames) {
-                    const colVector = table.getChild(col);
-                    row[col] = colVector?.get(i) ?? null;
-                }
-                parsedRows.push(row);
-            }
-
-            this.resultData = { rows: parsedRows, columns: colNames };
-            store.setProcessingStatus('success');
-            store.incrementTableRenderCounter();
-
-            return this.resultData;
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get data';
-            console.error('Error getting data:', err);
-            store.setError(errorMessage);
-            store.setProcessingStatus('error');
-            throw err;
-        }
-    }
 
     /**
      * Advanced query with filters, sorting, and pivot
      */
-    async getDataAdvanced(query: DataQuery): Promise<TableData> {
+    async getData(query: DataQuery): Promise<TableData> {
         const store = useFieldsStore.getState();
 
         try {
@@ -190,7 +145,7 @@ class DataService {
 
             // Call Rust with query JSON
             const queryJson = JSON.stringify(query);
-            const arr = get_data_advanced(queryJson);
+            const arr = get_data(queryJson);
             const table: Table = tableFromIPC(arr);
 
             // Parse to TableData format
@@ -267,7 +222,7 @@ class DataService {
     /**
      * Get aggregation result
      */
-    async getAggregation(column: string, aggregationType: 'sum' | 'average' | 'count' | 'min' | 'max'): Promise<any> {
+    async getAggregation(column: string, aggregationType: 'sum' | 'average' | 'count' | 'min' | 'max'): Promise<unknown> {
         try {
             const result = await aggregate_async(column, aggregationType);
             return JSON.parse(result);
@@ -280,7 +235,7 @@ class DataService {
     /**
      * Get filter options for a column
      */
-    async getFilterOptions(column: string): Promise<any> {
+    async getFilterOptions(column: string): Promise<unknown> {
         try {
             const result = await get_filter_options_async(column);
             return JSON.parse(result);
@@ -294,7 +249,7 @@ class DataService {
      * Get all data (no column filtering)
      */
     async getAllData(): Promise<TableData> {
-        return this.getData([]);
+        return this.getData({});
     }
 
     /**

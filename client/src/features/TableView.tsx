@@ -3,16 +3,13 @@ import { dataService } from '../services/dataService';
 import { useFieldsStore, selectProcessingStatus } from '../store/fieldsStore';
 import { useMemo } from 'react';
 
-interface ITableViewProps {
-    _dummy?: unknown;
-}
-
-export const TableView = (_props: ITableViewProps) => {
+export const TableView = () => {
     const processingStatus = useFieldsStore(selectProcessingStatus);
     const tableRenderCounter = useFieldsStore((state) => state.tableRenderCounter);
 
     const tableData = useMemo(() => {
         return dataService.getCurrentData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tableRenderCounter]);
 
     if (processingStatus === 'idle') {

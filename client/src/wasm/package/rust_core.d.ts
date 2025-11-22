@@ -6,12 +6,16 @@
  * ------------------------------------------------------------------
  */
 export function seed(bytes: Uint8Array): void;
-export function get_data(col_names: string): Uint8Array;
-export function get_meta_data(): any;
 /**
  * Advanced get_data with filters, sorting, and pivot support
  */
-export function get_data_advanced(query_json: string): Uint8Array;
+export function get_data(query_json: string): Uint8Array;
+export function get_meta_data(): any;
+export function aggregate(col_names: string, aggregation_type: string): any;
+/**
+ * Async version of aggregate
+ */
+export function aggregate_async(col_names: string, aggregation_type: string): Promise<any>;
 /**
  * Async version of get_filter_options
  */
@@ -20,12 +24,7 @@ export function get_filter_options_async(col_name: string): Promise<any>;
  * Async version of get_data_advanced
  */
 export function get_data_advanced_async(query_json: string): Promise<any>;
-/**
- * Async version of aggregate
- */
-export function aggregate_async(col_names: string, aggregation_type: string): Promise<any>;
 export function get_filter_options(col_name: string): any;
-export function aggregate(col_names: string, aggregation_type: string): any;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -34,7 +33,6 @@ export interface InitOutput {
   readonly aggregate: (a: number, b: number, c: number, d: number) => [number, number, number];
   readonly aggregate_async: (a: number, b: number, c: number, d: number) => any;
   readonly get_data: (a: number, b: number) => [number, number, number, number];
-  readonly get_data_advanced: (a: number, b: number) => [number, number, number, number];
   readonly get_data_advanced_async: (a: number, b: number) => any;
   readonly get_filter_options: (a: number, b: number) => [number, number, number];
   readonly get_filter_options_async: (a: number, b: number) => any;

@@ -4,7 +4,6 @@ export const memory: WebAssembly.Memory;
 export const aggregate: (a: number, b: number, c: number, d: number) => [number, number, number];
 export const aggregate_async: (a: number, b: number, c: number, d: number) => any;
 export const get_data: (a: number, b: number) => [number, number, number, number];
-export const get_data_advanced: (a: number, b: number) => [number, number, number, number];
 export const get_data_advanced_async: (a: number, b: number) => any;
 export const get_filter_options: (a: number, b: number) => [number, number, number];
 export const get_filter_options_async: (a: number, b: number) => any;
