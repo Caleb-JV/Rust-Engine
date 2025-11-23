@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FieldsKeeperBucket } from 'react-fields-keeper';
 import { useFieldsStore, selectActiveTab, selectPivotBuckets, selectFilterBuckets, selectFieldsPaneCollapsed } from '@/store/fieldsStore';
+import { FilterBuilder } from '@/components/FilterBuilder';
 
 export const FieldsPane = () => {
     // Use store for all state management
@@ -78,10 +79,19 @@ export const FieldsPane = () => {
                     <div className="space-y-4">
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-xs font-semibold">Active Filters</h4>
+                                <h4 className="text-xs font-semibold">Filter Fields</h4>
                                 <span className="text-xs text-muted-foreground">{filtersBucket?.items.length || 0}</span>
                             </div>
                             <FieldsKeeperBucket instanceId="filters" id="filters" allowRemoveFields emptyFieldPlaceholder="Drag fields to filter" />
+                        </div>
+
+                        <div className="pt-4 border-t">
+                            <FilterBuilder
+                                onApply={() => {
+                                    // Callback when filters are applied
+                                    console.log('Filters applied successfully');
+                                }}
+                            />
                         </div>
                     </div>
                 )}
