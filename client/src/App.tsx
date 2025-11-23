@@ -2,13 +2,21 @@ import { MainHeader } from './features/MainHeader';
 import { DataPane } from './features/DataPane';
 import { FieldsPane } from './features/FieldsPane';
 import { TableView } from './features/TableView';
-import { useFieldsStore, selectError } from './store/fieldsStore';
+import { AdvancedQueryDemo } from './components/AdvancedQueryDemo';
+import { useFieldsStore, selectError, selectProcessingStatus } from './store/fieldsStore';
 import './features/fields-keeper-custom.css';
 import DataProvider from './features/DataProvider';
+import { useState } from 'react';
+import { Button } from './components/ui/button';
 
 const App: React.FC = () => {
     // Store selectors
     const error = useFieldsStore(selectError);
+    const processingStatus = useFieldsStore(selectProcessingStatus);
+    const [showAdvancedDemo, setShowAdvancedDemo] = useState(false);
+
+    // Check if data is loaded
+    const isDataLoaded = processingStatus === 'success';
 
     return (
         <div className="min-h-screen bg-background grid grid-rows-[auto_1fr]">
@@ -23,11 +31,26 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <DataProvider>
-                <DataPane />
-                <FieldsPane />
-                <TableView />
-            </DataProvider>
+            {/* Toggle button for advanced query demo */}
+            {isDataLoaded && (
+                <div className="absolute top-20 right-4 z-40">
+                    <Button onClick={() => setShowAdvancedDemo(!showAdvancedDemo)} variant={showAdvancedDemo ? 'default' : 'outline'}>
+                        {showAdvancedDemo ? 'Hide' : 'Show'} Advanced Query Demo
+                    </Button>
+                </div>
+            )}
+
+            {showAdvancedDemo && isDataLoaded ? (
+                <div className="overflow-auto">
+                    <AdvancedQueryDemo />
+                </div>
+            ) : (
+                <DataProvider>
+                    <DataPane />
+                    <FieldsPane />
+                    <TableView />
+                </DataProvider>
+            )}
         </div>
     );
 };

@@ -37,7 +37,7 @@ export default function DataProvider(props: IDataProvider) {
 
         // Fetch data with selected columns
         if (columnNames.length > 0) {
-            await dataService.getData(columnNames);
+            await dataService.getData({ columns: columnNames });
         }
     };
 
