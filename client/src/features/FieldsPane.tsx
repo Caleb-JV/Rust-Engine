@@ -29,7 +29,7 @@ export const FieldsPane = () => {
     }
 
     return (
-        <div className="h-full flex flex-col border-r bg-background" style={{ width: '320px' }}>
+        <div className="h-screen flex flex-col border-r bg-background overflow-auto shrink-0" style={{ width: '320px' }}>
             <div className="flex items-center justify-between px-3 py-2 border-b">
                 <h3 className="font-semibold">Fields</h3>
                 <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(true)}>

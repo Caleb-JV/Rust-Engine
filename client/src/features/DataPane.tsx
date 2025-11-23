@@ -8,6 +8,7 @@ import { dataService } from '@/services/dataService';
 export const DataPane = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isDragging, setIsDragging] = useState(false);
 
     // Use store for state management
     const processingStatus = useFieldsStore(selectProcessingStatus);
@@ -22,6 +23,26 @@ export const DataPane = () => {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            await dataService.processFile(file);
+            setFileName(file.name);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const file = e.dataTransfer.files?.[0];
+        if (file && file.name.endsWith('.csv')) {
             await dataService.processFile(file);
             setFileName(file.name);
         }
@@ -54,31 +75,65 @@ export const DataPane = () => {
 
     if (!hasData) {
         return (
-            <div className="h-full flex flex-col border-r bg-background" style={{ width: '280px' }}>
-                <div className="flex items-center justify-between p-4 border-b">
+            <div
+                className={`
+                relative h-screen flex flex-col border-r transition-all
+                bg-background
+                ${isDragging ? 'outline-2 outline-primary/40 bg-primary/5' : ''}
+            `}
+                style={{ width: '280px' }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                <div className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm">
                     <h3 className="font-semibold">Data</h3>
                     <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(true)}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
                 </div>
-                <div className="flex-1 flex items-center justify-center p-6">
+
+                {/* Main Drop Zone */}
+                <div
+                    className={`
+                    flex-1 flex items-center justify-center p-6 transition-all overflow-auto shrink-0
+                    ${isDragging ? 'opacity-50' : ''}
+                `}
+                >
                     <div className="text-center">
-                        <div className="rounded-full bg-primary/10 p-6 mb-4 inline-block">
-                            <Upload className="h-8 w-8 text-primary" />
+                        <div className="rounded-full bg-primary/10 p-6 mb-4 inline-flex items-center justify-center shadow-sm">
+                            <Upload className="h-10 w-10 text-primary" />
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4">Upload a CSV file to start</p>
+
+                        <p className="text-sm text-muted-foreground mb-3">Drag & drop a CSV file here</p>
+
+                        <p className="text-xs text-muted-foreground mb-4">or</p>
+
                         <Button onClick={handleUploadClick} disabled={isLoading}>
                             {isLoading ? 'Processing...' : 'Select File'}
                         </Button>
-                        <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+
+                        <input ref={fileInputRef} type="file" accept=".csv , .parquet" onChange={handleFileChange} className="hidden" />
                     </div>
                 </div>
+
+                {/* Floating Drop Overlay (only when dragging) */}
+                {isDragging && (
+                    <div
+                        className="absolute inset-4 border-2 border-dashed border-primary/60 rounded-lg
+                    bg-primary/10 flex flex-col items-center justify-center pointer-events-none
+                    shadow-lg animate-in fade-in-0 zoom-in-95"
+                    >
+                        <Upload className="h-12 w-12 text-primary mb-3" />
+                        <p className="text-primary font-semibold text-sm">Drop your CSV file to upload</p>
+                    </div>
+                )}
             </div>
         );
     }
 
     return (
-        <div className="h-full flex flex-col border-r bg-background" style={{ width: '280px' }}>
+        <div className="h-screen flex flex-col border-r bg-background" style={{ width: '280px' }}>
             <div className="flex items-center justify-between px-3 py-2 border-b">
                 <div className="flex items-center gap-2">
                     <h3 className="font-semibold">Data</h3>
@@ -121,7 +176,7 @@ export const DataPane = () => {
                     <Upload className="h-3.5 w-3.5 mr-2" />
                     Load New File
                 </Button>
-                <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+                <input ref={fileInputRef} type="file" accept=".csv, .parquet" onChange={handleFileChange} className="hidden" />
             </div>
         </div>
     );

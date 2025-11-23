@@ -1,11 +1,65 @@
 import { tableFromIPC, Table } from 'apache-arrow';
-import init, { seed, get_meta_data, get_data, get_data_advanced_async, aggregate_async, get_filter_options_async } from '../wasm/package/rust_core';
+import init, { seed, get_meta_data, get_data_async, get_filter_options_async, get_timing_log, clear_timing_log } from '../wasm/package/rust_core';
 import type { Row, TableData } from '../types';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
-import type { IColumnField } from '../store/fieldsStore';
+import type { IColumnField, TimingLog } from '../store/fieldsStore';
 import { useFieldsStore } from '../store/fieldsStore';
+
+/**
+ * Map Rust function names to user-friendly operation descriptions
+ */
+function getFriendlyOperationName(rustOperation: string): string {
+    const operationMap: Record<string, string> = {
+        seed: 'Loading Data',
+        get_meta_data: 'Analyzing File',
+        get_data_async: 'Processing Query',
+        get_filter_options_async: 'Loading Filters',
+        apply_filters: 'Applying Filters',
+        apply_sort: 'Sorting Data',
+        apply_pivot: 'Pivoting Data',
+    };
+
+    return operationMap[rustOperation] || 'Processing';
+}
+
+/**
+ * Fetch and display timing logs from Rust WASM calls
+ * Stores only the latest timing in the store for UI display
+ */
+function logTimings(): void {
+    try {
+        const logs = get_timing_log();
+        if (logs && Array.isArray(logs) && logs.length > 0) {
+            // Get the latest log (last one in array)
+            const latestLog = logs[logs.length - 1];
+
+            // Format: "operation_name: 123.45ms"
+            const match = latestLog.match(/^(.+?):\s*(\d+\.?\d*)\s*ms$/);
+            if (match) {
+                const rustOperation = match[1].trim();
+                const timing: TimingLog = {
+                    operation: getFriendlyOperationName(rustOperation),
+                    duration_ms: parseFloat(match[2]),
+                };
+
+                // Store only the latest timing in Zustand
+                const store = useFieldsStore.getState();
+                store.setLatestTiming(timing);
+            }
+
+            // Console log for developers (show all)
+            console.group('🦀 WASM Performance');
+            console.table(logs.map((log, idx) => ({ '#': idx + 1, Timing: log })));
+            console.groupEnd();
+
+            clear_timing_log();
+        }
+    } catch (err) {
+        console.warn('Failed to fetch timing logs:', err);
+    }
+}
 
 // Query types matching Rust implementation
 export interface FilterCondition {
@@ -98,6 +152,7 @@ class DataService {
         try {
             store.setProcessingStatus('loading');
             store.setError(null);
+            store.setLatestTiming(null); // Clear old timing
 
             // 1. Initialize WASM
             await this.initialize();
@@ -107,9 +162,11 @@ class DataService {
             // 2. Seed data to Rust (data stays in Rust, not stored here)
             const bytes = new Uint8Array(await file.arrayBuffer());
             seed(bytes);
+            logTimings();
 
             // 3. Get metadata from Rust
             const metadataJson = get_meta_data();
+            logTimings();
             this.metadata = JSON.parse(metadataJson as string) as IGetMetaDataResponse;
 
             console.log('Metadata received:', this.metadata);
@@ -143,9 +200,10 @@ class DataService {
         try {
             store.setProcessingStatus('processing');
 
-            // Call Rust with query JSON
+            // Call Rust with query JSON (async version)
             const queryJson = JSON.stringify(query);
-            const arr = get_data(queryJson);
+            const arr = await get_data_async(queryJson);
+            logTimings();
             const table: Table = tableFromIPC(arr);
 
             // Parse to TableData format
@@ -176,68 +234,12 @@ class DataService {
     }
 
     /**
-     * Advanced query with async support
-     */
-    async getDataAdvancedAsync(query: DataQuery): Promise<TableData> {
-        const store = useFieldsStore.getState();
-
-        try {
-            store.setProcessingStatus('processing');
-
-            // Call Rust async with query JSON
-            const queryJson = JSON.stringify(query);
-            const result = await get_data_advanced_async(queryJson);
-
-            // Result is Uint8Array wrapped in promise
-            const arr = new Uint8Array(result);
-            const table: Table = tableFromIPC(arr);
-
-            // Parse to TableData format
-            const colNames = table.schema.fields.map((f) => f.name);
-            const parsedRows: Row[] = [];
-
-            for (let i = 0; i < table.numRows; i++) {
-                const row: Row = {};
-                for (const col of colNames) {
-                    const colVector = table.getChild(col);
-                    row[col] = colVector?.get(i) ?? null;
-                }
-                parsedRows.push(row);
-            }
-
-            this.resultData = { rows: parsedRows, columns: colNames };
-            store.setProcessingStatus('success');
-            store.incrementTableRenderCounter();
-
-            return this.resultData;
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get data';
-            console.error('Error getting advanced data async:', err);
-            store.setError(errorMessage);
-            store.setProcessingStatus('error');
-            throw err;
-        }
-    }
-
-    /**
-     * Get aggregation result
-     */
-    async getAggregation(column: string, aggregationType: 'sum' | 'average' | 'count' | 'min' | 'max'): Promise<unknown> {
-        try {
-            const result = await aggregate_async(column, aggregationType);
-            return JSON.parse(result);
-        } catch (err) {
-            console.error('Error getting aggregation:', err);
-            throw err;
-        }
-    }
-
-    /**
      * Get filter options for a column
      */
     async getFilterOptions(column: string): Promise<unknown> {
         try {
             const result = await get_filter_options_async(column);
+            logTimings();
             return JSON.parse(result);
         } catch (err) {
             console.error('Error getting filter options:', err);

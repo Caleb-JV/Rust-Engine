@@ -16,6 +16,7 @@ mod pivot;
 mod query_types;
 mod sorting;
 mod storage;
+mod timing;
 mod types;
 
 // Imports from modules
@@ -23,6 +24,10 @@ use error::{js_err, js_err_arrow};
 use helpers::{encode_ipc, to_simple_type};
 use query_types::DataQuery;
 use storage::{STORED_BATCHES, STORED_SCHEMA};
+use timing::{timed, timed_async};
+
+// Re-export timing functions for WASM
+pub use timing::{get_timing_log, clear_timing_log};
 
 
 /// ------------------------------------------------------------------
@@ -30,29 +35,30 @@ use storage::{STORED_BATCHES, STORED_SCHEMA};
 /// ------------------------------------------------------------------
 #[wasm_bindgen]
 pub fn seed(bytes: &[u8]) -> Result<(), JsValue> {
+    timed("seed", || {
+        let mut cursor = Cursor::new(bytes);
 
-    let mut cursor = Cursor::new(bytes);
-
-    let fmt = Format::default().with_header(true);
+        let fmt = Format::default().with_header(true);
     let (schema, _) = fmt.infer_schema(&mut cursor, None).map_err(js_err_arrow)?;
     let schema: SchemaRef = Arc::new(schema);
 
-    cursor.set_position(0);
+        cursor.set_position(0);
 
 
-    let reader = ReaderBuilder::new(schema.clone())
-        .with_header(true)
-        .build(cursor)
-        .map_err(js_err_arrow)?;
+        let reader = ReaderBuilder::new(schema.clone())
+            .with_header(true)
+            .build(cursor)
+            .map_err(js_err_arrow)?;
 
     let batches: Vec<RecordBatch> =
         reader.collect::<Result<Vec<_>, _>>().map_err(js_err_arrow)?;
 
-    // store globally
-    *STORED_SCHEMA.lock().unwrap() = Some(schema.clone());
-    *STORED_BATCHES.lock().unwrap() = Some(batches.clone());
+        // store globally
+        *STORED_SCHEMA.lock().unwrap() = Some(schema.clone());
+        *STORED_BATCHES.lock().unwrap() = Some(batches.clone());
 
-    Ok(())
+        Ok(())
+    })
 }
 
 
@@ -60,10 +66,11 @@ pub fn seed(bytes: &[u8]) -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub fn get_meta_data() -> Result<JsValue, JsValue> {
-    let schema_opt = STORED_SCHEMA
-        .lock()
-        .unwrap()
-        .clone();
+    timed("get_meta_data", || {
+        let schema_opt = STORED_SCHEMA
+            .lock()
+            .unwrap()
+            .clone();
 
     let schema = match schema_opt {
         Some(s) => s,
@@ -87,17 +94,19 @@ pub fn get_meta_data() -> Result<JsValue, JsValue> {
         "column_count": schema.fields().len(),
     });
 
-    let json_string = serde_json::to_string(&meta).map_err(|e| js_err(&format!("Serialization error: {}", e)))?;
-    Ok(JsValue::from_str(&json_string))
+        let json_string = serde_json::to_string(&meta).map_err(|e| js_err(&format!("Serialization error: {}", e)))?;
+        Ok(JsValue::from_str(&json_string))
+    })
 }
 
 
 /// Advanced get_data with filters, sorting, and pivot support
 #[wasm_bindgen]
 pub fn get_data(query_json: &str) -> Result<Vec<u8>, JsValue> {
-    // Parse query JSON
-    let query: DataQuery = serde_json::from_str(query_json)
-        .map_err(|e| js_err(&format!("Invalid query JSON: {}", e)))?;
+    timed("get_data", || {
+        // Parse query JSON
+        let query: DataQuery = serde_json::from_str(query_json)
+            .map_err(|e| js_err(&format!("Invalid query JSON: {}", e)))?;
 
     // Load stored schema and batches
     let schema = STORED_SCHEMA
@@ -173,14 +182,15 @@ pub fn get_data(query_json: &str) -> Result<Vec<u8>, JsValue> {
         batches = apply_limit_offset(batches, query.limit, query.offset)?;
     }
 
-    // Encode to IPC
-    let final_schema = if batches.is_empty() {
-        schema
-    } else {
-        batches[0].schema()
-    };
+        // Encode to IPC
+        let final_schema = if batches.is_empty() {
+            schema
+        } else {
+            batches[0].schema()
+        };
 
-    encode_ipc(&final_schema, &batches)
+        encode_ipc(&final_schema, &batches)
+    })
 }
 
 /// Apply limit and offset to batches
@@ -221,28 +231,26 @@ fn apply_limit_offset(
 
 #[wasm_bindgen]
 pub fn aggregate(col_names: &str, aggregation_type: &str) -> Result<JsValue, JsValue> {
-    operations::aggregate(col_names, aggregation_type)
+    timed("aggregate", || {
+        operations::aggregate(col_names, aggregation_type)
+    })
 }
 
 #[wasm_bindgen]
 pub fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
-    operations::get_filter_options(col_name)
+    timed("get_filter_options", || {
+        operations::get_filter_options(col_name)
+    })
 }
 
 /// Async version of get_data_advanced
 #[wasm_bindgen]
-pub fn get_data_advanced_async(query_json: String) -> js_sys::Promise {
+pub fn get_data_async(query_json: String) -> js_sys::Promise {
     future_to_promise(async move {
-        let result = get_data(&query_json)?;
-        Ok(js_sys::Uint8Array::from(&result[..]).into())
-    })
-}
-
-/// Async version of aggregate
-#[wasm_bindgen]
-pub fn aggregate_async(col_names: String, aggregation_type: String) -> js_sys::Promise {
-    future_to_promise(async move {
-        operations::aggregate(&col_names, &aggregation_type)
+        timed_async("get_data_async", || async {
+            let result = get_data(&query_json)?;
+            Ok(js_sys::Uint8Array::from(&result[..]).into())
+        }).await
     })
 }
 
@@ -250,6 +258,8 @@ pub fn aggregate_async(col_names: String, aggregation_type: String) -> js_sys::P
 #[wasm_bindgen]
 pub fn get_filter_options_async(col_name: String) -> js_sys::Promise {
     future_to_promise(async move {
-        operations::get_filter_options(&col_name)
+        timed_async("get_filter_options_async", || async {
+            operations::get_filter_options(&col_name)
+        }).await
     })
 }

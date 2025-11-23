@@ -1,4 +1,4 @@
-import { FileText, Loader2, CheckCircle2, XCircle, ZapIcon } from 'lucide-react';
+import { FileText, Loader2, CheckCircle2, XCircle, ZapIcon, Timer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useFieldsStore } from '@/store/fieldsStore';
@@ -9,6 +9,7 @@ export const MainHeader = () => {
     const processingStatus = useFieldsStore(selectProcessingStatus);
     const tableRowCount = useFieldsStore((state) => state.tableRowCount);
     const fileName = useFieldsStore((state) => state.fileName);
+    const latestTiming = useFieldsStore((state) => state.latestTiming);
 
     // handlers
     const getStatusBadge = () => {
@@ -63,6 +64,17 @@ export const MainHeader = () => {
                                 <FileText className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium max-w-64 overflow-hidden text-ellipsis">{fileName}</span>
                             </div>
+                            <Separator orientation="vertical" className="h-6" />
+                        </>
+                    )}
+
+                    {latestTiming && (
+                        <>
+                            <Badge variant="outline" className="gap-1.5 px-3">
+                                <Timer className="h-3 w-3" />
+                                <span className="text-xs">{latestTiming.operation}</span>
+                                <span className="font-mono text-xs font-semibold">{latestTiming.duration_ms.toFixed(2)}ms</span>
+                            </Badge>
                             <Separator orientation="vertical" className="h-6" />
                         </>
                     )}

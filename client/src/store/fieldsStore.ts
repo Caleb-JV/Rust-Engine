@@ -12,6 +12,11 @@ export type ActiveTab = 'pivot' | 'filters';
 
 export type ProcessingStatus = 'idle' | 'loading' | 'processing' | 'success' | 'error';
 
+export interface TimingLog {
+    operation: string;
+    duration_ms: number;
+}
+
 interface FieldsState {
     // App Status
     processingStatus: ProcessingStatus;
@@ -25,6 +30,9 @@ interface FieldsState {
 
     // File Name
     fileName?: string;
+
+    // Timing Logs (only latest operation)
+    latestTiming: TimingLog | null;
 
     // UI State
     activeTab: ActiveTab;
@@ -44,6 +52,7 @@ interface FieldsState {
     setError: (error: string | null) => void;
     setActiveTab: (tab: ActiveTab) => void;
     incrementTableRenderCounter: () => void;
+    setLatestTiming: (log: TimingLog | null) => void;
     setDataPaneCollapsed: (collapsed: boolean) => void;
     setFieldsPaneCollapsed: (collapsed: boolean) => void;
     setPivotBuckets: (buckets: IFieldsKeeperBucket<IColumnField>[]) => void;
@@ -59,6 +68,7 @@ const initialState = {
     isDataPaneCollapsed: false,
     isFieldsPaneCollapsed: false,
     tableRenderCounter: 0,
+    latestTiming: null,
     pivotBuckets: [
         { id: 'columns', items: [] },
         { id: 'values', items: [] },
@@ -82,6 +92,9 @@ export const useFieldsStore = create<FieldsState>()(
 
             incrementTableRenderCounter: () =>
                 set((state) => ({ tableRenderCounter: state.tableRenderCounter + 1 }), false, 'incrementTableRenderCounter'),
+
+            // Timing Actions
+            setLatestTiming: (log) => set({ latestTiming: log }, false, 'setLatestTiming'),
 
             // UI Actions
             setActiveTab: (tab) => set({ activeTab: tab }, false, 'setActiveTab'),
