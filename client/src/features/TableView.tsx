@@ -24,7 +24,7 @@ export const TableView = () => {
     }
 
     return (
-        <div className="flex-1 overflow-hidden p-4">
+        <div className="flex-1 overflow-auto p-4 h-screen">
             <Card className="h-full flex flex-col">
                 <CardHeader className="pb-3 border-b">
                     <CardTitle>Data Preview</CardTitle>
@@ -34,7 +34,7 @@ export const TableView = () => {
                 </CardHeader>
                 <CardContent className="flex-1 overflow-auto p-0">
                     <table className="w-full text-sm border-collapse">
-                        <thead className="bg-muted/50 sticky top-0 z-10">
+                        <thead className="bg-white shadow-md sticky top-0 z-10">
                             <tr>
                                 {tableData.columns.map((col) => (
                                     <th key={col} className="px-4 py-3 text-left font-semibold text-foreground border-b whitespace-nowrap">

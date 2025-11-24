@@ -138,7 +138,7 @@ export function FilterBuilder({ onApply }: FilterBuilderProps) {
             if (filters.length > 0) query.filters = filters;
             if (sorts.length > 0) query.sort = sorts;
 
-            await dataService.getDataAdvancedAsync(query);
+            await dataService.getData(query);
             onApply?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to apply filters/sorts');
