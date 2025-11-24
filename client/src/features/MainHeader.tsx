@@ -1,15 +1,15 @@
 import { FileText, Loader2, CheckCircle2, XCircle, ZapIcon, Timer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useFieldsStore } from '@/store/fieldsStore';
+import { useStore } from '@/store/fieldsStore';
 import { selectProcessingStatus } from '@/store/fieldsStore';
 
 export const MainHeader = () => {
     // state
-    const processingStatus = useFieldsStore(selectProcessingStatus);
-    const tableRowCount = useFieldsStore((state) => state.tableRowCount);
-    const fileName = useFieldsStore((state) => state.fileName);
-    const latestTiming = useFieldsStore((state) => state.latestTiming);
+    const processingStatus = useStore(selectProcessingStatus);
+    const tableRowCount = useStore((state) => state.tableRowCount);
+    const fileName = useStore((state) => state.fileName);
+    const latestTiming = useStore((state) => state.latestTiming);
 
     // handlers
     const getStatusBadge = () => {
@@ -17,14 +17,18 @@ export const MainHeader = () => {
             case 'loading':
                 return (
                     <Badge variant="secondary" className="gap-1.5">
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="animate-spin">
+                            <Loader2 className="h-3 w-3" />
+                        </span>
                         Initializing...
                     </Badge>
                 );
             case 'processing':
                 return (
                     <Badge variant="warning" className="gap-1.5">
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="animate-spin">
+                            <Loader2 className="h-3 w-3" />
+                        </span>
                         Processing
                     </Badge>
                 );
@@ -73,7 +77,7 @@ export const MainHeader = () => {
                             <Badge variant="outline" className="gap-1.5 px-3">
                                 <Timer className="h-3 w-3" />
                                 <span className="text-xs">{latestTiming.operation}</span>
-                                <span className="font-mono text-xs font-semibold">{latestTiming.duration_ms.toFixed(2)}ms</span>
+                                <span className="font-mono text-xs font-semibold">{latestTiming.duration_ms.toFixed(2)}s</span>
                             </Badge>
                             <Separator orientation="vertical" className="h-6" />
                         </>

@@ -6,12 +6,8 @@
 /client/.vite/
 /node_modules/
 
-# Keep WASM package files for end users without Rust environment
-# This allows consuming pre-built WASM without needing Rust toolchain
-#!/client/src/wasm/package/
-
-# Keep our custom WASM integration layer
-!/client/src/wasm/index.ts
+# WASM sources / generated bundle (managed by build, not by git)
+/client/src/wasm/
 
 # Environment files
 .env
@@ -122,6 +118,8 @@ Thumbs.db
 # Rust artifacts
 target/
 **/*.rs.bk
+# Ignore all generated WebAssembly binaries
+**/*.wasm
 
 # Keep Cargo.lock for application reproducibility
 # rust-core/Cargo.lock - committed for reproducible builds

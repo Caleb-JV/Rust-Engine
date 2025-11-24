@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { dataService, type FilterCondition, type SortSpec } from '../services/dataService';
-import { useFieldsStore } from '../store/fieldsStore';
+import { useStore } from '../store/fieldsStore';
 import { SortBuilder } from './SortBuilder';
 
 interface FilterBuilderProps {
@@ -15,7 +15,7 @@ interface FilterBuilderProps {
 }
 
 export function FilterBuilder({ onApply }: FilterBuilderProps) {
-    const filterBuckets = useFieldsStore((state) => state.filterBuckets);
+    const filterBuckets = useStore((state) => state.filterBuckets);
     const [filters, setFilters] = useState<FilterCondition[]>([]);
     const [sorts, setSorts] = useState<SortSpec[]>([]);
     const [loading, setLoading] = useState(false);
@@ -138,7 +138,7 @@ export function FilterBuilder({ onApply }: FilterBuilderProps) {
             if (filters.length > 0) query.filters = filters;
             if (sorts.length > 0) query.sort = sorts;
 
-            await dataService.getData(query);
+            dataService.getData(query);
             onApply?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to apply filters/sorts');

@@ -5,14 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import type { SortSpec } from '../services/dataService';
-import { useFieldsStore } from '../store/fieldsStore';
+import { useStore } from '../store/fieldsStore';
 
 interface SortBuilderProps {
     onSort?: (sorts: SortSpec[]) => void;
 }
 
 export function SortBuilder({ onSort }: SortBuilderProps) {
-    const pivotBuckets = useFieldsStore((state) => state.pivotBuckets);
+    const pivotBuckets = useStore((state) => state.pivotBuckets);
     const [sorts, setSorts] = useState<SortSpec[]>([]);
 
     // Get available columns from the columns bucket

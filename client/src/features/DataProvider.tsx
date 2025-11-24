@@ -1,6 +1,6 @@
 import React from 'react';
 import { FieldsKeeperProvider } from 'react-fields-keeper';
-import { useFieldsStore } from '../store/fieldsStore';
+import { useStore } from '../store/fieldsStore';
 import { dataService } from '../services/dataService';
 import './fields-keeper-custom.css';
 
@@ -13,22 +13,23 @@ export default function DataProvider(props: IDataProvider) {
     const { children } = props;
 
     // state
-    const pivotBuckets = useFieldsStore((state) => state.pivotBuckets);
-    const processingStatus = useFieldsStore((state) => state.processingStatus);
-    const filterBuckets = useFieldsStore((state) => state.filterBuckets);
-    const setPivotBuckets = useFieldsStore((state) => state.setPivotBuckets);
-    const setFilterBuckets = useFieldsStore((state) => state.setFilterBuckets);
+    const pivotBuckets = useStore((state) => state.pivotBuckets);
+    const processingStatus = useStore((state) => state.processingStatus);
+    const filterBuckets = useStore((state) => state.filterBuckets);
+    const fileName = useStore((state) => state.fileName);
+    const setPivotBuckets = useStore((state) => state.setPivotBuckets);
+    const setFilterBuckets = useStore((state) => state.setFilterBuckets);
 
     // Get all field items from service
 
     const allPivotItems = React.useMemo(() => {
-        if (processingStatus === 'success') return dataService.getAllFieldItems();
+        if (fileName) return dataService.getAllFieldItems();
 
         return [];
-    }, [processingStatus]);
+    }, [fileName, processingStatus]);
 
     // Pivot update handler - triggers getData
-    const onPivotUpdate = async (state: { buckets: typeof pivotBuckets }) => {
+    const onPivotUpdate = (state: { buckets: typeof pivotBuckets }) => {
         setPivotBuckets(state.buckets);
 
         // Get column names from columns bucket
@@ -36,9 +37,7 @@ export default function DataProvider(props: IDataProvider) {
         const columnNames = columnsBucket?.items.map((item) => item.value?.name).filter(Boolean) as string[];
 
         // Fetch data with selected columns
-        if (columnNames.length > 0) {
-            await dataService.getData({ columns: columnNames });
-        }
+        if (columnNames.length > 0) dataService.getData({ columns: columnNames });
     };
 
     // Filter update handler

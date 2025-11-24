@@ -1,65 +1,11 @@
 import { tableFromIPC, Table } from 'apache-arrow';
-import init, { seed, get_meta_data, get_data_async, get_filter_options_async, get_timing_log, clear_timing_log } from '../wasm/package/rust_core';
 import type { Row, TableData } from '../types';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
 import type { IColumnField, TimingLog } from '../store/fieldsStore';
-import { useFieldsStore } from '../store/fieldsStore';
-
-/**
- * Map Rust function names to user-friendly operation descriptions
- */
-function getFriendlyOperationName(rustOperation: string): string {
-    const operationMap: Record<string, string> = {
-        seed: 'Loading Data',
-        get_meta_data: 'Analyzing File',
-        get_data_async: 'Processing Query',
-        get_filter_options_async: 'Loading Filters',
-        apply_filters: 'Applying Filters',
-        apply_sort: 'Sorting Data',
-        apply_pivot: 'Pivoting Data',
-    };
-
-    return operationMap[rustOperation] || 'Processing';
-}
-
-/**
- * Fetch and display timing logs from Rust WASM calls
- * Stores only the latest timing in the store for UI display
- */
-function logTimings(): void {
-    try {
-        const logs = get_timing_log();
-        if (logs && Array.isArray(logs) && logs.length > 0) {
-            // Get the latest log (last one in array)
-            const latestLog = logs[logs.length - 1];
-
-            // Format: "operation_name: 123.45ms"
-            const match = latestLog.match(/^(.+?):\s*(\d+\.?\d*)\s*ms$/);
-            if (match) {
-                const rustOperation = match[1].trim();
-                const timing: TimingLog = {
-                    operation: getFriendlyOperationName(rustOperation),
-                    duration_ms: parseFloat(match[2]),
-                };
-
-                // Store only the latest timing in Zustand
-                const store = useFieldsStore.getState();
-                store.setLatestTiming(timing);
-            }
-
-            // Console log for developers (show all)
-            console.group('🦀 WASM Performance');
-            console.table(logs.map((log, idx) => ({ '#': idx + 1, Timing: log })));
-            console.groupEnd();
-
-            clear_timing_log();
-        }
-    } catch (err) {
-        console.warn('Failed to fetch timing logs:', err);
-    }
-}
+import { useStore } from '../store/fieldsStore';
+import { getWorkerClient } from '../worker/WorkerClient';
 
 // Query types matching Rust implementation
 export interface FilterCondition {
@@ -108,17 +54,19 @@ export interface DataQuery {
  * DataService - Professional singleton service for data operations
  *
  * Responsibilities:
- * 1. WASM initialization and communication
- * 2. File seeding (data stored in Rust, not here)
- * 3. Metadata management (fetched from Rust)
+ * 1. WASM Worker communication (all Rust operations run in Web Worker)
+ * 2. File seeding (data stored in Rust Worker, not here)
+ * 3. Metadata management (fetched from Rust Worker)
  * 4. Data retrieval with pivot/filter support
  * 5. Store integration for status updates
  *
- * NO CACHING - Data lives in Rust, metadata fetched on demand
+ * NO CACHING - Data lives in Rust Worker, metadata fetched on demand
+ * All heavy operations run off the main thread to prevent UI freezes
  */
 class DataService {
     private static instance: DataService;
     private isInitialized = false;
+    private workerClient = getWorkerClient();
 
     // Store metadata from Rust (not data!)
     private metadata: IGetMetaDataResponse | null = null;
@@ -134,12 +82,13 @@ class DataService {
     }
 
     /**
-     * Initialize WASM module
+     * Initialize WASM module in worker
      */
     private async initialize(): Promise<void> {
         if (this.isInitialized) return;
-        await init();
+        await this.workerClient.init();
         this.isInitialized = true;
+        console.log('[DataService] WASM Worker initialized');
     }
 
     /**
@@ -147,7 +96,7 @@ class DataService {
      * This is the main entry point after file upload
      */
     async processFile(file: File): Promise<IFieldsKeeperItem<IColumnField>[]> {
-        const store = useFieldsStore.getState();
+        const store = useStore.getState();
 
         try {
             store.setProcessingStatus('loading');
@@ -159,15 +108,32 @@ class DataService {
 
             store.setProcessingStatus('processing');
 
-            // 2. Seed data to Rust (data stays in Rust, not stored here)
+            // 2. Seed data to Rust Worker (data stays in Worker, not stored here)
             const bytes = new Uint8Array(await file.arrayBuffer());
-            seed(bytes);
-            logTimings();
+            const seedResponse = await this.workerClient.seed(bytes);
+            if (!seedResponse.success) {
+                throw new Error(seedResponse.message || 'Failed to seed data');
+            }
 
-            // 3. Get metadata from Rust
-            const metadataJson = get_meta_data();
-            logTimings();
-            this.metadata = JSON.parse(metadataJson as string) as IGetMetaDataResponse;
+            const seedTiming: TimingLog = {
+                operation: 'Loading Data',
+                duration_ms: seedResponse.timeTaken,
+            };
+            store.setLatestTiming(seedTiming);
+
+            // 3. Get metadata from Rust Worker
+            const metadataResponse = await this.workerClient.getMetaData();
+            if (!metadataResponse.success) {
+                throw new Error(metadataResponse.message || 'Failed to get metadata');
+            }
+
+            const metaTiming: TimingLog = {
+                operation: 'Analyzing File',
+                duration_ms: metadataResponse.timeTaken,
+            };
+            store.setLatestTiming(metaTiming);
+
+            this.metadata = JSON.parse(metadataResponse.data) as IGetMetaDataResponse;
 
             console.log('Metadata received:', this.metadata);
 
@@ -193,65 +159,86 @@ class DataService {
 
     /**
      * Advanced query with filters, sorting, and pivot
+     * Runs in Web Worker to prevent UI freezes
      */
-    async getData(query: DataQuery): Promise<TableData> {
-        const store = useFieldsStore.getState();
+    getData(query: DataQuery): void {
+        const store = useStore.getState();
 
-        try {
-            store.setProcessingStatus('processing');
+        store.setProcessingStatus('processing');
 
-            // Call Rust with query JSON (async version)
-            const queryJson = JSON.stringify(query);
-            const arr = await get_data_async(queryJson);
-            logTimings();
-            const table: Table = tableFromIPC(arr);
+        // Call Rust Worker with query JSON
+        const queryJson = JSON.stringify(query);
+        const dataResponse = this.workerClient.getData(queryJson);
 
-            // Parse to TableData format
-            const colNames = table.schema.fields.map((f) => f.name);
-            const parsedRows: Row[] = [];
+        const startTime = performance.now();
 
-            for (let i = 0; i < table.numRows; i++) {
-                const row: Row = {};
-                for (const col of colNames) {
-                    const colVector = table.getChild(col);
-                    row[col] = colVector?.get(i) ?? null;
+        console.log(`[DataService] Query started at ${startTime}`);
+
+        dataResponse
+            .then((response) => {
+                if (!response.success) throw new Error(response.message || 'Failed to get data');
+
+                const table: Table = tableFromIPC(response.data);
+
+                // Parse to TableData format
+                const colNames = table.schema.fields.map((f) => f.name);
+                const parsedRows: Row[] = [];
+
+                for (let i = 0; i < table.numRows; i++) {
+                    const row: Row = {};
+                    for (const col of colNames) {
+                        const colVector = table.getChild(col);
+                        row[col] = colVector?.get(i) ?? null;
+                    }
+                    parsedRows.push(row);
                 }
-                parsedRows.push(row);
-            }
 
-            this.resultData = { rows: parsedRows, columns: colNames };
-            store.setProcessingStatus('success');
-            store.incrementTableRenderCounter();
+                this.resultData = { rows: parsedRows, columns: colNames };
+                const endTime = performance.now();
+                console.log(`[DataService] Received at ${endTime}ms`);
+                const timeTaken = endTime - startTime;
+                console.log(`[DataService] Query processed in ${timeTaken}ms`);
 
-            return this.resultData;
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get data';
-            console.error('Error getting advanced data:', err);
-            store.setError(errorMessage);
-            store.setProcessingStatus('error');
-            throw err;
-        }
+                const timing: TimingLog = {
+                    operation: 'Processing Query',
+                    duration_ms: response.timeTaken,
+                };
+                store.setLatestTiming(timing);
+                store.setProcessingStatus('success');
+                store.incrementTableRenderCounter();
+            })
+            .catch((err) => {
+                const errorMessage = err instanceof Error ? err.message : 'Failed to get data';
+                console.error('[DataService] Error getting data:', err);
+                store.setError(errorMessage);
+                store.setProcessingStatus('error');
+                throw err;
+            });
     }
 
     /**
      * Get filter options for a column
+     * Runs in Web Worker to prevent UI freezes
      */
     async getFilterOptions(column: string): Promise<unknown> {
         try {
-            const result = await get_filter_options_async(column);
-            logTimings();
-            return JSON.parse(result);
+            const response = await this.workerClient.getFilterOptions(column);
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to get filter options');
+            }
+
+            const store = useStore.getState();
+            const timing: TimingLog = {
+                operation: 'Loading Filters',
+                duration_ms: response.timeTaken,
+            };
+            store.setLatestTiming(timing);
+
+            return JSON.parse(response.data);
         } catch (err) {
-            console.error('Error getting filter options:', err);
+            console.error('[DataService] Error getting filter options:', err);
             throw err;
         }
-    }
-
-    /**
-     * Get all data (no column filtering)
-     */
-    async getAllData(): Promise<TableData> {
-        return this.getData({});
     }
 
     /**
@@ -313,7 +300,7 @@ class DataService {
      * Use All Data - Move all columns to columns bucket
      */
     async useAllData(): Promise<void> {
-        const store = useFieldsStore.getState();
+        const store = useStore.getState();
         const allItems = this.getAllFieldItems();
 
         // Set all columns in columns bucket
@@ -326,14 +313,14 @@ class DataService {
         store.setFilterBuckets([{ id: 'filters', items: [] }]);
 
         // Fetch all data
-        await this.getAllData();
+        this.getData({});
     }
 
     /**
      * Clear all data - Reset pivot and filters
      */
     clearAllData(): void {
-        const store = useFieldsStore.getState();
+        const store = useStore.getState();
         store.setPivotBuckets([
             { id: 'columns', items: [] },
             { id: 'values', items: [] },
@@ -348,7 +335,7 @@ class DataService {
     reset(): void {
         this.metadata = null;
         this.resultData = { rows: [], columns: [] };
-        const store = useFieldsStore.getState();
+        const store = useStore.getState();
         store.resetStore();
     }
 }

@@ -2,13 +2,14 @@ import { MainHeader } from './features/MainHeader';
 import { DataPane } from './features/DataPane';
 import { FieldsPane } from './features/FieldsPane';
 import { TableView } from './features/TableView';
-import { useFieldsStore, selectError } from './store/fieldsStore';
+import { ProcessingIndicator } from './components/ProcessingIndicator';
+import { useStore, selectError } from './store/fieldsStore';
 import './features/fields-keeper-custom.css';
 import DataProvider from './features/DataProvider';
 
 const App: React.FC = () => {
     // Store selectors
-    const error = useFieldsStore(selectError);
+    const error = useStore(selectError);
 
     return (
         <div className="min-h-screen bg-background grid grid-rows-[auto_1fr]">
@@ -28,6 +29,9 @@ const App: React.FC = () => {
                 <FieldsPane />
                 <TableView />
             </DataProvider>
+
+            {/* Smooth rotating loader - demonstrates no UI freezes */}
+            <ProcessingIndicator />
         </div>
     );
 };

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Upload, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FieldsKeeperRootBucket, FieldsKeeperSearcher } from 'react-fields-keeper';
-import { useFieldsStore, selectActiveTab, selectDataPaneCollapsed, selectProcessingStatus } from '@/store/fieldsStore';
+import { useStore, selectActiveTab, selectDataPaneCollapsed, selectProcessingStatus } from '@/store/fieldsStore';
 import { dataService } from '@/services/dataService';
 
 export const DataPane = () => {
@@ -11,11 +11,12 @@ export const DataPane = () => {
     const [isDragging, setIsDragging] = useState(false);
 
     // Use store for state management
-    const processingStatus = useFieldsStore(selectProcessingStatus);
-    const activeTab = useFieldsStore(selectActiveTab);
-    const isCollapsed = useFieldsStore(selectDataPaneCollapsed);
-    const setIsCollapsed = useFieldsStore((state) => state.setDataPaneCollapsed);
-    const setFileName = useFieldsStore((state) => state.setFileName);
+    const processingStatus = useStore(selectProcessingStatus);
+    const activeTab = useStore(selectActiveTab);
+    const isCollapsed = useStore(selectDataPaneCollapsed);
+    const fileName = useStore((state) => state.fileName);
+    const setIsCollapsed = useStore((state) => state.setDataPaneCollapsed);
+    const setFileName = useStore((state) => state.setFileName);
 
     const metadata = dataService.getMetadata();
     const hasData = metadata !== null;
@@ -73,7 +74,7 @@ export const DataPane = () => {
         );
     }
 
-    if (!hasData) {
+    if (!fileName) {
         return (
             <div
                 className={`

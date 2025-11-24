@@ -1,17 +1,17 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FieldsKeeperBucket } from 'react-fields-keeper';
-import { useFieldsStore, selectActiveTab, selectPivotBuckets, selectFilterBuckets, selectFieldsPaneCollapsed } from '@/store/fieldsStore';
+import { useStore, selectActiveTab, selectPivotBuckets, selectFilterBuckets, selectFieldsPaneCollapsed } from '@/store/fieldsStore';
 import { FilterBuilder } from '@/components/FilterBuilder';
 
 export const FieldsPane = () => {
     // Use store for all state management
-    const activeTab = useFieldsStore(selectActiveTab);
-    const pivotBuckets = useFieldsStore(selectPivotBuckets);
-    const filterBuckets = useFieldsStore(selectFilterBuckets);
-    const isCollapsed = useFieldsStore(selectFieldsPaneCollapsed);
-    const setActiveTab = useFieldsStore((state) => state.setActiveTab);
-    const setIsCollapsed = useFieldsStore((state) => state.setFieldsPaneCollapsed);
+    const activeTab = useStore(selectActiveTab);
+    const pivotBuckets = useStore(selectPivotBuckets);
+    const filterBuckets = useStore(selectFilterBuckets);
+    const isCollapsed = useStore(selectFieldsPaneCollapsed);
+    const setActiveTab = useStore((state) => state.setActiveTab);
+    const setIsCollapsed = useStore((state) => state.setFieldsPaneCollapsed);
 
     const columnsBucket = pivotBuckets.find((b) => b.id === 'columns');
     const valuesBucket = pivotBuckets.find((b) => b.id === 'values');
