@@ -17,7 +17,7 @@ export interface TimingLog {
     duration_ms: number;
 }
 
-interface FieldsState {
+interface IRootState {
     // App Status
     processingStatus: ProcessingStatus;
     error: string | null;
@@ -76,7 +76,7 @@ const initialState = {
     filterBuckets: [{ id: 'filters', items: [] }],
 };
 
-export const useFieldsStore = create<FieldsState>()(
+export const useStore = create<IRootState>()(
     devtools(
         (set) => ({
             ...initialState,
@@ -129,10 +129,10 @@ export const useFieldsStore = create<FieldsState>()(
 );
 
 // Selectors for optimized re-renders
-export const selectProcessingStatus = (state: FieldsState) => state.processingStatus;
-export const selectError = (state: FieldsState) => state.error;
-export const selectActiveTab = (state: FieldsState) => state.activeTab;
-export const selectPivotBuckets = (state: FieldsState) => state.pivotBuckets;
-export const selectFilterBuckets = (state: FieldsState) => state.filterBuckets;
-export const selectDataPaneCollapsed = (state: FieldsState) => state.isDataPaneCollapsed;
-export const selectFieldsPaneCollapsed = (state: FieldsState) => state.isFieldsPaneCollapsed;
+export const selectProcessingStatus = (state: IRootState) => state.processingStatus;
+export const selectError = (state: IRootState) => state.error;
+export const selectActiveTab = (state: IRootState) => state.activeTab;
+export const selectPivotBuckets = (state: IRootState) => state.pivotBuckets;
+export const selectFilterBuckets = (state: IRootState) => state.filterBuckets;
+export const selectDataPaneCollapsed = (state: IRootState) => state.isDataPaneCollapsed;
+export const selectFieldsPaneCollapsed = (state: IRootState) => state.isFieldsPaneCollapsed;

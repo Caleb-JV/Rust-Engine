@@ -20,8 +20,21 @@ where
     if let Ok(mut log) = TIMING_LOG.lock() {
         log.push(log_entry);
     }
-    
+
     result
+}
+
+/// Measure a synchronous function and return both its result and duration in ms.
+/// This is useful when the caller needs the numeric duration (e.g. for timeTaken
+/// fields) in addition to logging.
+pub fn measure<F, R>(func: F) -> (R, f64)
+where
+    F: FnOnce() -> R,
+{
+    let start = Date::now();
+    let result = func();
+    let duration = Date::now() - start;
+    (result, duration)
 }
 
 /// Simple timing helper for async functions

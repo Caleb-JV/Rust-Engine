@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { dataService } from '../services/dataService';
-import { useFieldsStore, selectProcessingStatus } from '../store/fieldsStore';
+import { useStore, selectProcessingStatus } from '../store/fieldsStore';
 import { useMemo } from 'react';
 
 export const TableView = () => {
-    const processingStatus = useFieldsStore(selectProcessingStatus);
-    const tableRenderCounter = useFieldsStore((state) => state.tableRenderCounter);
+    const processingStatus = useStore(selectProcessingStatus);
+    const tableRenderCounter = useStore((state) => state.tableRenderCounter);
 
     const tableData = useMemo(() => {
         return dataService.getCurrentData();
