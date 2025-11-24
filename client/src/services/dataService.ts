@@ -1,11 +1,11 @@
-import { tableFromIPC, Table } from 'apache-arrow';
-import init, { seed, get_meta_data, get_data_async, get_filter_options_async, get_timing_log, clear_timing_log } from '../wasm/package/rust_core';
-import type { Row, TableData } from '../types';
+import init, { get_timing_log, clear_timing_log } from '../wasm/package/rust_core';
+import type { TableData } from '../types';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
 import type { IColumnField, TimingLog } from '../store/fieldsStore';
 import { useFieldsStore } from '../store/fieldsStore';
+import { workerClient } from '../worker/worker-client';
 
 /**
  * Map Rust function names to user-friendly operation descriptions
@@ -145,43 +145,30 @@ class DataService {
     /**
      * Process file: Seed data to Rust and fetch metadata
      * This is the main entry point after file upload
+     * Supports streaming for large files with progress updates
      */
-    async processFile(file: File): Promise<IFieldsKeeperItem<IColumnField>[]> {
+    async processFile(file: File) {
         const store = useFieldsStore.getState();
-
         try {
             store.setProcessingStatus('loading');
-            store.setError(null);
-            store.setLatestTiming(null); // Clear old timing
+            store.setLatestTiming(null);
+            store.setUploadProgress(null);
 
-            // 1. Initialize WASM
-            await this.initialize();
+            const { metadata, timing } = await workerClient.processFile(file, (progress) => {
+                // Update progress in store for UI display
+                store.setUploadProgress(progress);
+            });
 
-            store.setProcessingStatus('processing');
-
-            // 2. Seed data to Rust (data stays in Rust, not stored here)
-            const bytes = new Uint8Array(await file.arrayBuffer());
-            seed(bytes);
-            logTimings();
-
-            // 3. Get metadata from Rust
-            const metadataJson = get_meta_data();
-            logTimings();
-            this.metadata = JSON.parse(metadataJson as string) as IGetMetaDataResponse;
-
-            console.log('Metadata received:', this.metadata);
-
-            // 4. Convert metadata to FieldsKeeper items
-            const allItems = this.createFieldItems();
-
+            this.metadata = metadata;
+            store.setLatestTiming(timing);
+            store.setUploadProgress(null); // Clear progress after completion
             store.setProcessingStatus('success');
 
-            return allItems;
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
-            console.error('Error processing file:', err);
-            store.setError(errorMessage);
+            return this.createFieldItems();
+        } catch (err: any) {
             store.setProcessingStatus('error');
+            store.setError(err.message);
+            store.setUploadProgress(null); // Clear progress on error
             throw err;
         }
     }
@@ -194,41 +181,23 @@ class DataService {
     /**
      * Advanced query with filters, sorting, and pivot
      */
-    async getData(query: DataQuery): Promise<TableData> {
+    async getData(query: DataQuery) {
         const store = useFieldsStore.getState();
 
         try {
             store.setProcessingStatus('processing');
 
-            // Call Rust with query JSON (async version)
-            const queryJson = JSON.stringify(query);
-            const arr = await get_data_async(queryJson);
-            logTimings();
-            const table: Table = tableFromIPC(arr);
+            const { rows, columns, timing } = await workerClient.getData(query);
 
-            // Parse to TableData format
-            const colNames = table.schema.fields.map((f) => f.name);
-            const parsedRows: Row[] = [];
-
-            for (let i = 0; i < table.numRows; i++) {
-                const row: Row = {};
-                for (const col of colNames) {
-                    const colVector = table.getChild(col);
-                    row[col] = colVector?.get(i) ?? null;
-                }
-                parsedRows.push(row);
-            }
-
-            this.resultData = { rows: parsedRows, columns: colNames };
+            this.resultData = { rows, columns };
+            store.setLatestTiming(timing);
             store.setProcessingStatus('success');
             store.incrementTableRenderCounter();
 
             return this.resultData;
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to get data';
-            console.error('Error getting advanced data:', err);
-            store.setError(errorMessage);
+        } catch (err: any) {
             store.setProcessingStatus('error');
+            store.setError(err.message);
             throw err;
         }
     }
@@ -236,15 +205,11 @@ class DataService {
     /**
      * Get filter options for a column
      */
-    async getFilterOptions(column: string): Promise<unknown> {
-        try {
-            const result = await get_filter_options_async(column);
-            logTimings();
-            return JSON.parse(result);
-        } catch (err) {
-            console.error('Error getting filter options:', err);
-            throw err;
-        }
+    async getFilterOptions(column: string) {
+        const { options, timing } = await workerClient.getFilterOptions(column);
+        const store = useFieldsStore.getState();
+        store.setLatestTiming(timing);
+        return options;
     }
 
     /**

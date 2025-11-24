@@ -85,6 +85,30 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     CLOSURE_DTORS.register(real, state, state);
     return real;
 }
+/**
+ * Get all timing log entries
+ * @returns {any}
+ */
+export function get_timing_log() {
+    const ret = wasm.get_timing_log();
+    return ret;
+}
+
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log() {
+    wasm.clear_timing_log();
+}
+
+let WASM_VECTOR_LEN = 0;
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
 
 function takeFromExternrefTable0(idx) {
     const value = wasm.__wbindgen_externrefs.get(idx);
@@ -92,17 +116,33 @@ function takeFromExternrefTable0(idx) {
     return value;
 }
 /**
- * @returns {any}
+ * ------------------------------------------------------------------
+ *   STREAMING API: Initialize streaming mode with header
+ * ------------------------------------------------------------------
+ * @param {Uint8Array} header_bytes
  */
-export function get_meta_data() {
-    const ret = wasm.get_meta_data();
+export function seed_start(header_bytes) {
+    const ptr0 = passArray8ToWasm0(header_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_start(ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Finalize streaming (optional cleanup)
+ * ------------------------------------------------------------------
+ * @returns {number}
+ */
+export function seed_finalize() {
+    const ret = wasm.seed_finalize();
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
-    return takeFromExternrefTable0(ret[0]);
+    return ret[0] >>> 0;
 }
-
-let WASM_VECTOR_LEN = 0;
 
 const cachedTextEncoder = new TextEncoder();
 
@@ -156,6 +196,71 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 /**
+ * Async version of get_data_advanced
+ * @param {string} query_json
+ * @returns {Promise<any>}
+ */
+export function get_data_async(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Process and append a chunk of CSV data
+ * ------------------------------------------------------------------
+ * @param {Uint8Array} chunk_bytes
+ * @param {boolean} has_header
+ */
+export function seed_chunk(chunk_bytes, has_header) {
+    const ptr0 = passArray8ToWasm0(chunk_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_chunk(ptr0, len0, has_header);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * @returns {any}
+ */
+export function get_meta_data() {
+    const ret = wasm.get_meta_data();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * Async version of get_filter_options
+ * @param {string} col_name
+ * @returns {Promise<any>}
+ */
+export function get_filter_options_async(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * @param {string} col_name
+ * @returns {any}
+ */
+export function get_filter_options(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} col_names
  * @param {string} aggregation_type
  * @returns {any}
@@ -190,50 +295,6 @@ export function get_data(query_json) {
 }
 
 /**
- * @param {string} col_name
- * @returns {any}
- */
-export function get_filter_options(col_name) {
-    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_filter_options(ptr0, len0);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return takeFromExternrefTable0(ret[0]);
-}
-
-/**
- * Async version of get_filter_options
- * @param {string} col_name
- * @returns {Promise<any>}
- */
-export function get_filter_options_async(col_name) {
-    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_filter_options_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Async version of get_data_advanced
- * @param {string} query_json
- * @returns {Promise<any>}
- */
-export function get_data_async(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_async(ptr0, len0);
-    return ret;
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-/**
  * ------------------------------------------------------------------
  *   CSV → Arrow IPC → store schema + batches
  * ------------------------------------------------------------------
@@ -246,22 +307,6 @@ export function seed(bytes) {
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
-}
-
-/**
- * Get all timing log entries
- * @returns {any}
- */
-export function get_timing_log() {
-    const ret = wasm.get_timing_log();
-    return ret;
-}
-
-/**
- * Clear the timing log
- */
-export function clear_timing_log() {
-    wasm.clear_timing_log();
 }
 
 function wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2) {

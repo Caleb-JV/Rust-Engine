@@ -61,6 +61,73 @@ pub fn seed(bytes: &[u8]) -> Result<(), JsValue> {
     })
 }
 
+/// ------------------------------------------------------------------
+///   STREAMING API: Initialize streaming mode with header
+/// ------------------------------------------------------------------
+#[wasm_bindgen]
+pub fn seed_start(header_bytes: &[u8]) -> Result<(), JsValue> {
+    timed("seed_start", || {
+        let mut cursor = Cursor::new(header_bytes);
+        
+        let fmt = Format::default().with_header(true);
+        let (schema, _) = fmt.infer_schema(&mut cursor, None).map_err(js_err_arrow)?;
+        let schema: SchemaRef = Arc::new(schema);
+        
+        // Initialize with schema and empty batches
+        *STORED_SCHEMA.lock().unwrap() = Some(schema.clone());
+        *STORED_BATCHES.lock().unwrap() = Some(Vec::new());
+        
+        Ok(())
+    })
+}
+
+/// ------------------------------------------------------------------
+///   STREAMING API: Process and append a chunk of CSV data
+/// ------------------------------------------------------------------
+#[wasm_bindgen]
+pub fn seed_chunk(chunk_bytes: &[u8], has_header: bool) -> Result<(), JsValue> {
+    timed("seed_chunk", || {
+        let schema_guard = STORED_SCHEMA.lock().unwrap();
+        let schema = schema_guard
+            .as_ref()
+            .ok_or_else(|| js_err("Schema not initialized. Call seed_start first."))?;
+        
+        let cursor = Cursor::new(chunk_bytes);
+        
+        let reader = ReaderBuilder::new(schema.clone())
+            .with_header(has_header)
+            .build(cursor)
+            .map_err(js_err_arrow)?;
+        
+        let new_batches: Vec<RecordBatch> = reader
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(js_err_arrow)?;
+        
+        // Append to existing batches
+        let mut batches_guard = STORED_BATCHES.lock().unwrap();
+        if let Some(ref mut batches) = *batches_guard {
+            batches.extend(new_batches);
+        }
+        
+        Ok(())
+    })
+}
+
+/// ------------------------------------------------------------------
+///   STREAMING API: Finalize streaming (optional cleanup)
+/// ------------------------------------------------------------------
+#[wasm_bindgen]
+pub fn seed_finalize() -> Result<usize, JsValue> {
+    timed("seed_finalize", || {
+        let batches_guard = STORED_BATCHES.lock().unwrap();
+        let total_rows = batches_guard
+            .as_ref()
+            .map(|batches| batches.iter().map(|b| b.num_rows()).sum())
+            .unwrap_or(0);
+        Ok(total_rows)
+    })
+}
+
 
 
 

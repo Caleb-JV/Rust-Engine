@@ -34,6 +34,9 @@ interface FieldsState {
     // Timing Logs (only latest operation)
     latestTiming: TimingLog | null;
 
+    // Upload Progress (for large files)
+    uploadProgress: { percent: number; bytesProcessed: number; totalBytes: number } | null;
+
     // UI State
     activeTab: ActiveTab;
     isDataPaneCollapsed: boolean;
@@ -53,6 +56,7 @@ interface FieldsState {
     setActiveTab: (tab: ActiveTab) => void;
     incrementTableRenderCounter: () => void;
     setLatestTiming: (log: TimingLog | null) => void;
+    setUploadProgress: (progress: { percent: number; bytesProcessed: number; totalBytes: number } | null) => void;
     setDataPaneCollapsed: (collapsed: boolean) => void;
     setFieldsPaneCollapsed: (collapsed: boolean) => void;
     setPivotBuckets: (buckets: IFieldsKeeperBucket<IColumnField>[]) => void;
@@ -69,6 +73,7 @@ const initialState = {
     isFieldsPaneCollapsed: false,
     tableRenderCounter: 0,
     latestTiming: null,
+    uploadProgress: null,
     pivotBuckets: [
         { id: 'columns', items: [] },
         { id: 'values', items: [] },
@@ -94,7 +99,12 @@ export const useFieldsStore = create<FieldsState>()(
                 set((state) => ({ tableRenderCounter: state.tableRenderCounter + 1 }), false, 'incrementTableRenderCounter'),
 
             // Timing Actions
-            setLatestTiming: (log) => set({ latestTiming: log }, false, 'setLatestTiming'),
+            setLatestTiming: (timing) =>
+                set({
+                    latestTiming: timing && typeof timing.duration_ms === 'number' ? timing : null, // Always force null on invalid data
+                }),
+
+            setUploadProgress: (progress) => set({ uploadProgress: progress }, false, 'setUploadProgress'),
 
             // UI Actions
             setActiveTab: (tab) => set({ activeTab: tab }, false, 'setActiveTab'),

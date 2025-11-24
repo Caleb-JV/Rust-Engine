@@ -73,7 +73,7 @@ export const MainHeader = () => {
                             <Badge variant="outline" className="gap-1.5 px-3">
                                 <Timer className="h-3 w-3" />
                                 <span className="text-xs">{latestTiming.operation}</span>
-                                <span className="font-mono text-xs font-semibold">{latestTiming.duration_ms.toFixed(2)}ms</span>
+                                <span className="font-mono text-xs font-semibold">{latestTiming.duration_ms.toFixed(2) ?? '—'}ms</span>
                             </Badge>
                             <Separator orientation="vertical" className="h-6" />
                         </>
