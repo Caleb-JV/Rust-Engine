@@ -94,6 +94,7 @@ class DataService {
     /**
      * Process file: Seed data to Rust and fetch metadata
      * This is the main entry point after file upload
+     * Uses streaming for large files (>5MB) with progress updates
      */
     async processFile(file: File): Promise<IFieldsKeeperItem<IColumnField>[]> {
         const store = useStore.getState();
@@ -108,32 +109,65 @@ class DataService {
 
             store.setProcessingStatus('processing');
 
-            // 2. Seed data to Rust Worker (data stays in Worker, not stored here)
-            const bytes = new Uint8Array(await file.arrayBuffer());
-            const seedResponse = await this.workerClient.seed(bytes);
-            if (!seedResponse.success) {
-                throw new Error(seedResponse.message || 'Failed to seed data');
+            const useStreaming = file.size > 5 * 1024 * 1024; // > 5MB
+
+            if (useStreaming) {
+                // 2a. Use streaming API with progress updates
+                console.log(`[DataService] Using streaming mode for file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+
+                const result = await this.workerClient.processFile(file, (progress) => {
+                    console.log(`[DataService] Progress: ${progress.percent}%`);
+                    // You can emit progress to UI here if needed
+                    // store.setLoadingProgress?.(progress.percent);
+                });
+
+                if (!result.success) {
+                    throw new Error(result.message || 'Failed to process file');
+                }
+
+                // Extract metadata from streaming result
+                this.metadata = JSON.parse(result.data.metadataJson) as IGetMetaDataResponse;
+
+                // Log timing info from streaming
+                if (result.data.timing && result.data.timing.length > 0) {
+                    console.log('[DataService] Timing logs:', result.data.timing);
+                }
+
+                const seedTiming: TimingLog = {
+                    operation: 'Loading Data (Streaming)',
+                    duration_ms: result.timeTaken || 0,
+                };
+                store.setLatestTiming(seedTiming);
+            } else {
+                // 2b. Small file: Use traditional seed method (faster for small files)
+                console.log(`[DataService] Using direct mode for file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                const seedResponse = await this.workerClient.seed(bytes);
+                if (!seedResponse.success) {
+                    throw new Error(seedResponse.message || 'Failed to seed data');
+                }
+
+                const seedTiming: TimingLog = {
+                    operation: 'Loading Data',
+                    duration_ms: seedResponse.timeTaken,
+                };
+                store.setLatestTiming(seedTiming);
+
+                // 3. Get metadata from Rust Worker
+                const metadataResponse = await this.workerClient.getMetaData();
+                if (!metadataResponse.success) {
+                    throw new Error(metadataResponse.message || 'Failed to get metadata');
+                }
+
+                const metaTiming: TimingLog = {
+                    operation: 'Analyzing File',
+                    duration_ms: metadataResponse.timeTaken,
+                };
+                store.setLatestTiming(metaTiming);
+
+                this.metadata = JSON.parse(metadataResponse.data) as IGetMetaDataResponse;
             }
-
-            const seedTiming: TimingLog = {
-                operation: 'Loading Data',
-                duration_ms: seedResponse.timeTaken,
-            };
-            store.setLatestTiming(seedTiming);
-
-            // 3. Get metadata from Rust Worker
-            const metadataResponse = await this.workerClient.getMetaData();
-            if (!metadataResponse.success) {
-                throw new Error(metadataResponse.message || 'Failed to get metadata');
-            }
-
-            const metaTiming: TimingLog = {
-                operation: 'Analyzing File',
-                duration_ms: metadataResponse.timeTaken,
-            };
-            store.setLatestTiming(metaTiming);
-
-            this.metadata = JSON.parse(metadataResponse.data) as IGetMetaDataResponse;
 
             console.log('Metadata received:', this.metadata);
 

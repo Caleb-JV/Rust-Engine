@@ -1,53 +1,53 @@
 /**
  * Type-safe client for communicating with the WASM Worker
- *
- * Provides a clean async API that mirrors the original WASM interface,
- * but executes all operations in a Web Worker to prevent UI freezes.
- *
- * Features:
- * - Automatic request/response correlation via unique IDs
- * - Promise-based async API
- * - Zero-copy transfers for large data (Uint8Array)
- * - Proper error propagation
- * - Type-safe request/response handling
  */
 
-import type { WorkerMessage, WorkerRequest, WorkerResponse, IResponse, ExtractResponseType, IPendingRequest } from './types';
-import { REQUEST_TYPE, RESPONSE_TYPE, createRequestId, isSuccessResponse, isErrorResponse } from './types';
+import type {
+    WorkerMessage,
+    WorkerRequest,
+    WorkerResponse,
+    IResponse,
+    ExtractResponseType,
+    IPendingRequest,
+    IProcessFileProgress,
+    IProcessFileResult,
+} from './types';
+import { REQUEST_TYPE, RESPONSE_TYPE, createRequestId, isSuccessResponse, isErrorResponse, isProgressResponse } from './types';
+
+// Extend pending request type to include onProgress
+type PendingRequest = IPendingRequest & {
+    onProgress?: (data: any) => void;
+};
 
 // ============================================================================
 // Worker Client
 // ============================================================================
-
 export class WorkerClient {
     private worker: Worker;
-    private pendingRequests = new Map<string, IPendingRequest>();
+    private pendingRequests = new Map<string, PendingRequest>();
     private requestIdCounter = 0;
 
     constructor() {
-        // Create worker instance
         this.worker = new Worker(new URL('./WorkerManagers.ts', import.meta.url), {
             type: 'module',
         });
 
-        // Set up message listener
         this.worker.addEventListener('message', this.handleMessage.bind(this));
         this.worker.addEventListener('error', this.handleError.bind(this));
     }
 
-    /**
-     * Generate unique request ID
-     */
+    /** Generate unique request ID */
     private generateRequestId(): string {
         return createRequestId(++this.requestIdCounter);
     }
 
-    /**
-     * Send request to worker and wait for response
-     */
+    /** Send request to worker and wait for response */
     private async sendRequest<T extends WorkerRequest['type']>(
         request: WorkerRequest,
-        transferables?: Transferable[],
+        options?: {
+            transferables?: Transferable[];
+            onProgress?: (data: any) => void;
+        },
     ): Promise<ExtractResponseType<T>> {
         const id = this.generateRequestId();
 
@@ -56,57 +56,56 @@ export class WorkerClient {
             payload: request,
         };
 
-        // Create promise that will be resolved when response arrives
         const promise = new Promise<ExtractResponseType<T>>((resolve, reject) => {
-            this.pendingRequests.set(id, { resolve, reject });
+            this.pendingRequests.set(id, { resolve, reject, onProgress: options?.onProgress });
         });
 
-        // Send message to worker
-        this.worker.postMessage(message, transferables || []);
+        this.worker.postMessage(message, options?.transferables || []);
 
         return promise;
     }
 
-    /**
-     * Handle incoming messages from worker
-     */
+    /** Handle incoming messages from worker */
     private handleMessage(event: MessageEvent<WorkerMessage<WorkerResponse>>): void {
         const { id, payload } = event.data;
-
         const pending = this.pendingRequests.get(id);
+
         if (!pending) {
             console.warn('[WorkerClient] Received response for unknown request:', id);
             return;
         }
 
-        // Remove from pending
+        // Handle progress responses: don't resolve/reject yet
+        if (isProgressResponse(payload.type)) {
+            if (pending.onProgress && 'data' in payload) {
+                pending.onProgress(payload.data);
+            }
+            return;
+        }
+
+        // Final responses
         this.pendingRequests.delete(id);
 
-        // Handle response based on type using pure functions
         if (isSuccessResponse(payload.type)) {
-            // Success responses
             if (payload.type === RESPONSE_TYPE.INIT_SUCCESS) {
-                pending.resolve(undefined);
+                pending.resolve(undefined as any);
             } else if ('response' in payload) {
-                pending.resolve(payload.response);
+                pending.resolve(payload.response as any);
             }
         } else if (isErrorResponse(payload.type)) {
-            // Error responses
             if ('error' in payload) {
                 pending.reject(new Error(payload.error));
+            } else {
+                pending.reject(new Error('Unknown worker error'));
             }
         } else {
             pending.reject(new Error(`Unknown response type: ${payload.type}`));
         }
     }
 
-    /**
-     * Handle worker errors
-     */
+    /** Handle worker errors */
     private handleError(event: ErrorEvent): void {
         console.error('[WorkerClient] Worker error:', event.error);
-
-        // Reject all pending requests
         this.pendingRequests.forEach(({ reject }) => {
             reject(new Error(`Worker error: ${event.message}`));
         });
@@ -117,32 +116,21 @@ export class WorkerClient {
     // Public API - mirrors the WASM interface
     // ========================================================================
 
-    /**
-     * Initialize WASM module in worker
-     */
     async init(): Promise<void> {
         return this.sendRequest<typeof REQUEST_TYPE.INIT>({ type: REQUEST_TYPE.INIT });
     }
 
-    /**
-     * Seed data into Rust
-     */
     async seed(bytes: Uint8Array): Promise<IResponse<null>> {
-        // Transfer the Uint8Array buffer for zero-copy performance
         const transferables = [bytes.buffer];
-        return this.sendRequest<typeof REQUEST_TYPE.SEED>({ type: REQUEST_TYPE.SEED, payload: { bytes } }, transferables);
+        return this.sendRequest<typeof REQUEST_TYPE.SEED>({ type: REQUEST_TYPE.SEED, payload: { bytes } }, { transferables });
     }
 
-    /**
-     * Get metadata from Rust
-     */
     async getMetaData(): Promise<IResponse<string>> {
-        return this.sendRequest<typeof REQUEST_TYPE.GET_META_DATA>({ type: REQUEST_TYPE.GET_META_DATA });
+        return this.sendRequest<typeof REQUEST_TYPE.GET_META_DATA>({
+            type: REQUEST_TYPE.GET_META_DATA,
+        });
     }
 
-    /**
-     * Get data with query
-     */
     async getData(queryJson: string): Promise<IResponse<Uint8Array>> {
         return this.sendRequest<typeof REQUEST_TYPE.GET_DATA>({
             type: REQUEST_TYPE.GET_DATA,
@@ -150,9 +138,6 @@ export class WorkerClient {
         });
     }
 
-    /**
-     * Get filter options for a column
-     */
     async getFilterOptions(column: string): Promise<IResponse<string>> {
         return this.sendRequest<typeof REQUEST_TYPE.GET_FILTER_OPTIONS>({
             type: REQUEST_TYPE.GET_FILTER_OPTIONS,
@@ -172,17 +157,27 @@ export class WorkerClient {
 
     /**
      * Terminate the worker
+     * NEW: Process a File using streaming + progress
      */
+    async processFile(file: File, onProgress?: (progress: IProcessFileProgress) => void): Promise<IResponse<IProcessFileResult>> {
+        return this.sendRequest<typeof REQUEST_TYPE.PROCESS_FILE>(
+            {
+                type: REQUEST_TYPE.PROCESS_FILE,
+                payload: { file },
+            },
+            {
+                onProgress,
+            },
+        );
+    }
+
     terminate(): void {
         this.worker.terminate();
         this.pendingRequests.clear();
     }
 }
 
-// ============================================================================
-// Singleton Instance
-// ============================================================================
-
+// Singleton instance
 let workerClientInstance: WorkerClient | null = null;
 
 export function getWorkerClient(): WorkerClient {

@@ -19,6 +19,8 @@ export const REQUEST_TYPE = {
     GET_DATA: 'GET_DATA',
     GET_FILTER_OPTIONS: 'GET_FILTER_OPTIONS',
     GET_PROCESSED_DATA: 'GET_PROCESSED_DATA',
+    // NEW (streaming)
+    PROCESS_FILE: 'PROCESS_FILE',
 } as const;
 
 export type WorkerRequestType = (typeof REQUEST_TYPE)[keyof typeof REQUEST_TYPE];
@@ -26,16 +28,25 @@ export type WorkerRequestType = (typeof REQUEST_TYPE)[keyof typeof REQUEST_TYPE]
 export const RESPONSE_TYPE = {
     INIT_SUCCESS: 'INIT_SUCCESS',
     INIT_ERROR: 'INIT_ERROR',
+
     SEED_SUCCESS: 'SEED_SUCCESS',
     SEED_ERROR: 'SEED_ERROR',
+
     GET_META_DATA_SUCCESS: 'GET_META_DATA_SUCCESS',
     GET_META_DATA_ERROR: 'GET_META_DATA_ERROR',
+
     GET_DATA_SUCCESS: 'GET_DATA_SUCCESS',
     GET_DATA_ERROR: 'GET_DATA_ERROR',
+
     GET_FILTER_OPTIONS_SUCCESS: 'GET_FILTER_OPTIONS_SUCCESS',
     GET_FILTER_OPTIONS_ERROR: 'GET_FILTER_OPTIONS_ERROR',
     GET_PROCESSED_DATA_SUCCESS: 'GET_PROCESSED_DATA_SUCCESS',
     GET_PROCESSED_DATA_ERROR: 'GET_PROCESSED_DATA_ERROR',
+
+    // NEW (streaming)
+    PROCESS_FILE_PROGRESS: 'PROCESS_FILE_PROGRESS',
+    PROCESS_FILE_SUCCESS: 'PROCESS_FILE_SUCCESS',
+    PROCESS_FILE_ERROR: 'PROCESS_FILE_ERROR',
 } as const;
 
 export type WorkerResponseType = (typeof RESPONSE_TYPE)[keyof typeof RESPONSE_TYPE];
@@ -51,6 +62,19 @@ export interface IResponse<T> {
     timeTaken: number; // milliseconds
 }
 
+// NEW — streaming progress payload
+export interface IProcessFileProgress {
+    percent: number;
+    bytesProcessed: number;
+    totalBytes: number;
+}
+
+// NEW — final streaming result
+export interface IProcessFileResult {
+    metadataJson: string;
+    timing: any[];
+}
+
 // ============================================================================
 // Request Types (Main Thread → Worker)
 // ============================================================================
@@ -61,7 +85,9 @@ export type WorkerRequest =
     | { type: typeof REQUEST_TYPE.GET_META_DATA }
     | { type: typeof REQUEST_TYPE.GET_DATA; payload: { queryJson: string } }
     | { type: typeof REQUEST_TYPE.GET_FILTER_OPTIONS; payload: { column: string } }
-    | { type: typeof REQUEST_TYPE.GET_PROCESSED_DATA; payload: { data: string; pivot: string; aggregationMap: string } };
+    | { type: typeof REQUEST_TYPE.GET_PROCESSED_DATA; payload: { data: string; pivot: string; aggregationMap: string } }
+    // NEW streaming large file input
+    | { type: typeof REQUEST_TYPE.PROCESS_FILE; payload: { file: File } };
 
 // ============================================================================
 // Response Types (Worker → Main Thread)
@@ -78,7 +104,11 @@ export type WorkerResponse =
     | { type: typeof RESPONSE_TYPE.GET_DATA_ERROR; error: string }
     | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS; response: IResponse<string> }
     | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR; error: string }
-    | { type: typeof RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR; error: string };
+    | { type: typeof RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR; error: string }
+    // NEW streaming: progress + final + error
+    | { type: typeof RESPONSE_TYPE.PROCESS_FILE_PROGRESS; data: IProcessFileProgress }
+    | { type: typeof RESPONSE_TYPE.PROCESS_FILE_SUCCESS; response: IResponse<IProcessFileResult> }
+    | { type: typeof RESPONSE_TYPE.PROCESS_FILE_ERROR; error: string };
 
 // ============================================================================
 // Message Envelope (includes request ID for async correlation)
@@ -105,27 +135,26 @@ export type ExtractResponseType<T extends WorkerRequest['type']> = T extends typ
             ? IResponse<string>
             : T extends typeof REQUEST_TYPE.GET_PROCESSED_DATA
               ? IResponse<string>
+            : T extends typeof REQUEST_TYPE.PROCESS_FILE
+              ? IResponse<IProcessFileResult>
               : never;
 
 export interface IPendingRequest<T = any> {
     resolve: (value: T) => void;
     reject: (error: Error) => void;
+    onProgress?: (data: any) => void; // NEW — progress callback support
 }
 
 // ============================================================================
 // Pure Utility Functions
 // ============================================================================
 
-/**
- * Create a unique request ID
- */
+/** Create a unique request ID */
 export function createRequestId(counter: number): string {
     return `req_${counter}_${Date.now()}`;
 }
 
-/**
- * Create a success response type from request type
- */
+/** Map request → success response */
 export function getSuccessResponseType(requestType: WorkerRequestType): WorkerResponseType {
     const mapping: Record<WorkerRequestType, WorkerResponseType> = {
         [REQUEST_TYPE.INIT]: RESPONSE_TYPE.INIT_SUCCESS,
@@ -134,13 +163,13 @@ export function getSuccessResponseType(requestType: WorkerRequestType): WorkerRe
         [REQUEST_TYPE.GET_DATA]: RESPONSE_TYPE.GET_DATA_SUCCESS,
         [REQUEST_TYPE.GET_FILTER_OPTIONS]: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS,
         [REQUEST_TYPE.GET_PROCESSED_DATA]: RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS,
+        // NEW
+        [REQUEST_TYPE.PROCESS_FILE]: RESPONSE_TYPE.PROCESS_FILE_SUCCESS,
     };
     return mapping[requestType];
 }
 
-/**
- * Create an error response type from request type
- */
+/** Map request → error response */
 export function getErrorResponseType(requestType: WorkerRequestType): WorkerResponseType {
     const mapping: Record<WorkerRequestType, WorkerResponseType> = {
         [REQUEST_TYPE.INIT]: RESPONSE_TYPE.INIT_ERROR,
@@ -149,13 +178,13 @@ export function getErrorResponseType(requestType: WorkerRequestType): WorkerResp
         [REQUEST_TYPE.GET_DATA]: RESPONSE_TYPE.GET_DATA_ERROR,
         [REQUEST_TYPE.GET_FILTER_OPTIONS]: RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR,
         [REQUEST_TYPE.GET_PROCESSED_DATA]: RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR,
+        // NEW
+        [REQUEST_TYPE.PROCESS_FILE]: RESPONSE_TYPE.PROCESS_FILE_ERROR,
     };
     return mapping[requestType];
 }
 
-/**
- * Check if response is a success type
- */
+/** Check if response is a success type */
 export function isSuccessResponse(type: WorkerResponseType): boolean {
     return (
         type === RESPONSE_TYPE.INIT_SUCCESS ||
@@ -163,20 +192,31 @@ export function isSuccessResponse(type: WorkerResponseType): boolean {
         type === RESPONSE_TYPE.GET_META_DATA_SUCCESS ||
         type === RESPONSE_TYPE.GET_DATA_SUCCESS ||
         type === RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS ||
-        type === RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS
+        type === RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS||
+        // NEW
+        type === RESPONSE_TYPE.PROCESS_FILE_SUCCESS
     );
 }
 
-/**
- * Check if response is an error type
- */
+/** Check if response is an error type */
 export function isErrorResponse(type: WorkerResponseType): boolean {
-    return !isSuccessResponse(type);
+    return (
+        type === RESPONSE_TYPE.INIT_ERROR ||
+        type === RESPONSE_TYPE.SEED_ERROR ||
+        type === RESPONSE_TYPE.GET_META_DATA_ERROR ||
+        type === RESPONSE_TYPE.GET_DATA_ERROR ||
+        type === RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR ||
+        // NEW
+        type === RESPONSE_TYPE.PROCESS_FILE_ERROR
+    );
 }
 
-/**
- * Extract transferable objects from response for zero-copy transfer
- */
+/** Check if response is a progress update (NEW) */
+export function isProgressResponse(type: WorkerResponseType): boolean {
+    return type === RESPONSE_TYPE.PROCESS_FILE_PROGRESS;
+}
+
+/** Extract transferable objects for zero-copy transfer */
 export function extractTransferables(response: WorkerResponse): Transferable[] {
     const transferables: Transferable[] = [];
 
@@ -187,12 +227,12 @@ export function extractTransferables(response: WorkerResponse): Transferable[] {
         }
     }
 
+    // PROCESS_FILE_SUCCESS does not need transferables (metadata only)
+
     return transferables;
 }
 
-/**
- * Create an error response
- */
+/** Create a typed error response */
 export function createErrorResponse(requestType: WorkerRequestType, error: string): WorkerResponse {
     const errorType = getErrorResponseType(requestType);
     return { type: errorType, error } as WorkerResponse;
