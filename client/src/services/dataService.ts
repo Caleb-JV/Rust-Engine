@@ -175,14 +175,14 @@ class DataService {
         console.log(`[DataService] Query started at ${startTime}`);
 
         dataResponse
-            .then((response) => {
+            .then(async (response) => {
                 if (!response.success) throw new Error(response.message || 'Failed to get data');
 
                 const table: Table = tableFromIPC(response.data);
 
                 // Parse to TableData format
                 const colNames = table.schema.fields.map((f) => f.name);
-                const parsedRows: Row[] = [];
+                let parsedRows: Row[] = [];
 
                 for (let i = 0; i < table.numRows; i++) {
                     const row: Row = {};
@@ -192,7 +192,16 @@ class DataService {
                     }
                     parsedRows.push(row);
                 }
-
+                const stringifiedRows = JSON.stringify(parsedRows, (_, value) =>
+                    typeof value === 'bigint'
+                        ? value.toString() // Convert BigInt to string
+                        : value,
+                );
+                const stringifiedPivot = JSON.stringify(['Tags']);
+                const stringifiedAggregationMap = JSON.stringify({ Parent: 'sum' });
+                parsedRows = JSON.parse(
+                    (await this.workerClient.getProcessedData(stringifiedRows, stringifiedPivot, stringifiedAggregationMap)).data,
+                );
                 this.resultData = { rows: parsedRows, columns: colNames };
                 const endTime = performance.now();
                 console.log(`[DataService] Received at ${endTime}ms`);

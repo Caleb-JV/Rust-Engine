@@ -3,7 +3,7 @@ use wasm_bindgen_futures::future_to_promise;
 
 use js_sys::{Object, Reflect};
 
-use crate::{get_data, get_filter_options, get_meta_data, seed};
+use crate::{get_data, get_filter_options,get_processed_data, get_meta_data, seed};
 use crate::timing::measure;
 
 /// Build a standard JS response object matching the IResponse<T> shape on the
@@ -77,6 +77,19 @@ pub fn get_filter_options_async(col_name: String) -> js_sys::Promise {
         match result {
             Ok(options) => Ok(build_response(options, true, "", duration)),
             Err(_) => Ok(build_response(JsValue::NULL, false, "get_filter_options failed", duration)),
+        }
+    })
+}
+
+/// Async version of get_processed_data with a structured response envelope
+#[wasm_bindgen]
+pub fn get_processed_data_async(data: String,pivot:String,aggregationMap:String) -> js_sys::Promise {
+    future_to_promise(async move {
+        let (result, duration) = measure(|| get_processed_data(&data,&pivot,&aggregationMap));
+
+        match result {
+            Ok(options) => Ok(build_response(options, true, "", duration)),
+            Err(_) => Ok(build_response(JsValue::NULL, false, "get_processed_data failed", duration)),
         }
     })
 }

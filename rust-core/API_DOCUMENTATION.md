@@ -126,6 +126,8 @@ Perform aggregation on a single column.
 
 #### `get_filter_options(col_name: &str) -> Result<JsValue, JsValue>`
 
+#### `get_processed_data(data: String,pivot:String,aggregationMap:String) -> Result<JsValue, JsValue>`
+
 Get available filter options for a column:
 
 - Text columns: unique values
@@ -148,6 +150,10 @@ Async version of `aggregate`.
 #### `get_filter_options_async(col_name: String) -> Promise`
 
 Async version of `get_filter_options`.
+
+#### `get_processed_data_async(data: String,pivot:String,aggregationMap:String) -> Promise`
+
+Async version of `get_processed_data`.
 
 ## Example Usage
 

@@ -18,6 +18,7 @@ export const REQUEST_TYPE = {
     GET_META_DATA: 'GET_META_DATA',
     GET_DATA: 'GET_DATA',
     GET_FILTER_OPTIONS: 'GET_FILTER_OPTIONS',
+    GET_PROCESSED_DATA: 'GET_PROCESSED_DATA',
 } as const;
 
 export type WorkerRequestType = (typeof REQUEST_TYPE)[keyof typeof REQUEST_TYPE];
@@ -33,6 +34,8 @@ export const RESPONSE_TYPE = {
     GET_DATA_ERROR: 'GET_DATA_ERROR',
     GET_FILTER_OPTIONS_SUCCESS: 'GET_FILTER_OPTIONS_SUCCESS',
     GET_FILTER_OPTIONS_ERROR: 'GET_FILTER_OPTIONS_ERROR',
+    GET_PROCESSED_DATA_SUCCESS: 'GET_PROCESSED_DATA_SUCCESS',
+    GET_PROCESSED_DATA_ERROR: 'GET_PROCESSED_DATA_ERROR',
 } as const;
 
 export type WorkerResponseType = (typeof RESPONSE_TYPE)[keyof typeof RESPONSE_TYPE];
@@ -57,7 +60,8 @@ export type WorkerRequest =
     | { type: typeof REQUEST_TYPE.SEED; payload: { bytes: Uint8Array } }
     | { type: typeof REQUEST_TYPE.GET_META_DATA }
     | { type: typeof REQUEST_TYPE.GET_DATA; payload: { queryJson: string } }
-    | { type: typeof REQUEST_TYPE.GET_FILTER_OPTIONS; payload: { column: string } };
+    | { type: typeof REQUEST_TYPE.GET_FILTER_OPTIONS; payload: { column: string } }
+    | { type: typeof REQUEST_TYPE.GET_PROCESSED_DATA; payload: { data: string; pivot: string; aggregationMap: string } };
 
 // ============================================================================
 // Response Types (Worker → Main Thread)
@@ -73,7 +77,8 @@ export type WorkerResponse =
     | { type: typeof RESPONSE_TYPE.GET_DATA_SUCCESS; response: IResponse<Uint8Array> }
     | { type: typeof RESPONSE_TYPE.GET_DATA_ERROR; error: string }
     | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS; response: IResponse<string> }
-    | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR; error: string };
+    | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR; error: string }
+    | { type: typeof RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR; error: string };
 
 // ============================================================================
 // Message Envelope (includes request ID for async correlation)
@@ -98,7 +103,9 @@ export type ExtractResponseType<T extends WorkerRequest['type']> = T extends typ
           ? IResponse<Uint8Array>
           : T extends typeof REQUEST_TYPE.GET_FILTER_OPTIONS
             ? IResponse<string>
-            : never;
+            : T extends typeof REQUEST_TYPE.GET_PROCESSED_DATA
+              ? IResponse<string>
+              : never;
 
 export interface IPendingRequest<T = any> {
     resolve: (value: T) => void;
@@ -126,6 +133,7 @@ export function getSuccessResponseType(requestType: WorkerRequestType): WorkerRe
         [REQUEST_TYPE.GET_META_DATA]: RESPONSE_TYPE.GET_META_DATA_SUCCESS,
         [REQUEST_TYPE.GET_DATA]: RESPONSE_TYPE.GET_DATA_SUCCESS,
         [REQUEST_TYPE.GET_FILTER_OPTIONS]: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS,
+        [REQUEST_TYPE.GET_PROCESSED_DATA]: RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS,
     };
     return mapping[requestType];
 }
@@ -140,6 +148,7 @@ export function getErrorResponseType(requestType: WorkerRequestType): WorkerResp
         [REQUEST_TYPE.GET_META_DATA]: RESPONSE_TYPE.GET_META_DATA_ERROR,
         [REQUEST_TYPE.GET_DATA]: RESPONSE_TYPE.GET_DATA_ERROR,
         [REQUEST_TYPE.GET_FILTER_OPTIONS]: RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR,
+        [REQUEST_TYPE.GET_PROCESSED_DATA]: RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR,
     };
     return mapping[requestType];
 }
@@ -153,7 +162,8 @@ export function isSuccessResponse(type: WorkerResponseType): boolean {
         type === RESPONSE_TYPE.SEED_SUCCESS ||
         type === RESPONSE_TYPE.GET_META_DATA_SUCCESS ||
         type === RESPONSE_TYPE.GET_DATA_SUCCESS ||
-        type === RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS
+        type === RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS ||
+        type === RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS
     );
 }
 

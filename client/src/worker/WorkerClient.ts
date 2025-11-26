@@ -161,6 +161,16 @@ export class WorkerClient {
     }
 
     /**
+     * Get data with query
+     */
+    async getProcessedData(data: string, pivot: string, aggregationMap: string): Promise<IResponse<string>> {
+        return this.sendRequest<typeof REQUEST_TYPE.GET_PROCESSED_DATA>({
+            type: REQUEST_TYPE.GET_PROCESSED_DATA,
+            payload: { data, pivot, aggregationMap },
+        });
+    }
+
+    /**
      * Terminate the worker
      */
     terminate(): void {

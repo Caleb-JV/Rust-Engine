@@ -1,11 +1,20 @@
 use arrow_array::{Array, Float64Array, Int64Array};
-use serde_json::json;
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{ JsValue};
 
 use crate::error::js_err;
 use crate::helpers::parse_cols;
 use crate::storage::{STORED_BATCHES, STORED_SCHEMA};
 use crate::types::AggregationType;
+
+// Imports required for the grouping/aggregation logic:
+use serde::{Serialize,Deserialize};
+use serde_json::{json, Value};
+use std::collections::HashMap;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct AggregationConfig {
+    pub fields: HashMap<String, String>,
+}
 
 /// Perform aggregation operations on a column
 pub fn aggregate(col_names: &str, aggregation_type: &str) -> Result<JsValue, JsValue> {
@@ -350,3 +359,131 @@ pub fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 
     Ok(JsValue::from_str(&json_result.to_string()))
 }
+
+
+
+fn get_field_as_string<'a>(row: &'a Value, field: &str) -> Option<&'a str> {
+    row.get(field).and_then(Value::as_str)
+}
+
+
+pub fn get_processed_data(
+    rows_json: &str,
+    group_by_json: &str,
+    aggregation_config_json: &str,
+) -> Result<JsValue, JsValue> {
+    let rows: Vec<Value> = serde_json::from_str(rows_json)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse rows JSON: {}", e)))?;
+
+    let group_by: Vec<String> = serde_json::from_str(group_by_json).unwrap_or_default();
+    if group_by.is_empty() {
+        return Ok(JsValue::from_str(rows_json));
+    }
+
+    let aggregation_map: HashMap<String, String> =
+        serde_json::from_str(aggregation_config_json).unwrap_or_default();
+    let has_aggregation = !aggregation_map.is_empty();
+
+    let mut groups: HashMap<String, Vec<Value>> = HashMap::new();
+    let mut ungrouped: Vec<Value> = Vec::new();
+
+    // group rows
+    for row in rows.into_iter() {
+        let mut key_parts = Vec::new();
+        let mut missing_key = false;
+
+        for k in &group_by {
+            match row.get(k) {
+                Some(v) => key_parts.push(v.to_string()),
+                None => {
+                    missing_key = true;
+                    break;
+                }
+            }
+        }
+
+        if missing_key {
+            ungrouped.push(row);
+        } else {
+            groups.entry(key_parts.join("|")).or_default().push(row);
+        }
+    }
+
+    let mut output: Vec<Value> = Vec::new();
+
+    for (_key, children) in groups {
+        if children.is_empty() {
+            continue;
+        }
+
+        let first = &children[0];
+        let mut parent = json!({});
+
+        // set pivot fields
+        for k in &group_by {
+            if let Some(v) = first.get(k) {
+                parent[k] = v.clone();
+            }
+        }
+
+      if has_aggregation {
+      for (col, method) in &aggregation_map {
+        let m = method.to_lowercase();
+        match m.as_str() {
+            "sum" => {
+                let mut total = 0.0;
+                for ch in &children {
+                    let value = ch.get(col);
+                    if let Some(n) = value.and_then(Value::as_f64) {
+                        total += n;
+                    } else if let Some(s) = value.and_then(Value::as_str) {
+                        if let Ok(n) = s.parse::<f64>() {
+                            total += n;
+                        }
+                    }
+                }
+                parent[col] = json!(total);
+            }
+
+            "count" => {
+                parent[col] = json!(children.len());
+            }
+
+            "avg" | "average" => {
+                let mut total = 0.0;
+                let mut count = 0.0;
+                for ch in &children {
+                    let value = ch.get(col);
+                    if let Some(n) = value.and_then(Value::as_f64) {
+                        total += n;
+                        count += 1.0;
+                    } else if let Some(s) = value.and_then(Value::as_str) {
+                        if let Ok(n) = s.parse::<f64>() {
+                            total += n;
+                            count += 1.0;
+                        }
+                    }
+                }
+                parent[col] = json!(if count > 0.0 { total / count } else { 0.0 });
+            }
+
+            _ => {}
+        }
+    }
+}
+
+        parent["isParent"] = json!(true);
+        output.push(parent);
+        output.extend(children);
+    }
+
+    // finally append rows that didn't match group keys
+    output.extend(ungrouped);
+
+   serde_json::to_string(&output)
+    .map(|s: String| JsValue::from_str(&s))
+    .map_err(|e| JsValue::from_str(&format!("Failed to serialize output JSON: {}", e)))
+
+}
+
+
