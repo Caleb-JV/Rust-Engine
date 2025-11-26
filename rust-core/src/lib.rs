@@ -30,6 +30,7 @@ pub use api::{
     get_filter_options_async,
     get_meta_data_async,
     seed_async,
+    get_processed_data_async
 };
 
 // Re-export streaming seed functions
@@ -422,4 +423,8 @@ fn apply_limit_offset(
 
 pub(crate) fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 	operations::get_filter_options(col_name)
+}
+
+pub(crate) fn get_processed_data(data: &str,pivot:&str,aggregationMap:&str) -> Result<JsValue, JsValue> {
+	operations::get_processed_data(data,pivot,aggregationMap)
 }

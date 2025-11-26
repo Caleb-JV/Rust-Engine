@@ -7,6 +7,7 @@ import init, {
     get_meta_data_async,
     get_data_async,
     get_filter_options_async,
+    get_processed_data_async,
     // NEW streaming + timing exports
     seed_start,
     seed_chunk,
@@ -138,6 +139,10 @@ const handleGetFilterOptions = async (column: string): Promise<IResponse<string>
     return (await get_filter_options_async(column)) as IResponse<string>;
 };
 
+const handleProcessData = async (data: string, pivot: string, aggregationMap: string): Promise<IResponse<string>> => {
+    return (await get_processed_data_async(data, pivot, aggregationMap)) as IResponse<string>;
+};
+
 // ============================================================================
 // Message Router
 // ============================================================================
@@ -174,6 +179,11 @@ const handleMessage = async (message: WorkerMessage<WorkerRequest>): Promise<Wor
                 return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
             }
 
+            case REQUEST_TYPE.GET_PROCESSED_DATA: {
+                const response = await handleProcessData(payload.payload.data, payload.payload.pivot, payload.payload.aggregationMap);
+                return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
+            }
+            
             // NEW: processFile with streaming + progress
             case REQUEST_TYPE.PROCESS_FILE: {
                 const file = payload.payload.file as File;
