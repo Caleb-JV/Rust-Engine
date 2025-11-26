@@ -7,6 +7,8 @@ import type { IColumnField, TimingLog } from '../store/fieldsStore';
 import { useStore } from '../store/fieldsStore';
 import { getWorkerClient } from '../worker/WorkerClient';
 
+export type TAggregationType = 'sum' | 'average' | 'count' | 'min' | 'max';
+
 // Query types matching Rust implementation
 export interface FilterCondition {
     column: string;
@@ -32,7 +34,7 @@ export interface SortSpec {
 
 export interface PivotValue {
     column: string;
-    aggregation: 'sum' | 'average' | 'count' | 'min' | 'max';
+    aggregation: TAggregationType;
 }
 
 export interface PivotSpec {
@@ -327,6 +329,7 @@ class DataService {
                 id: col.name,
                 name: col.name,
                 dataType: rustTypeToDataType(col.type),
+                aggregate: rustTypeToDataType(col.type) === 'number' ? 'sum' : undefined,
             },
             prefixNode: rustTypeToDataType(col.type) === 'number' ? 'measure-icon' : undefined,
         }));
