@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { IFieldsKeeperBucket } from 'react-fields-keeper';
+import type { TAggregationType } from '../services/dataService';
 
 export interface IColumnField {
     id: string;
     name: string;
     dataType: 'string' | 'number' | 'boolean';
+    aggregate?: TAggregationType;
 }
 
 export type ActiveTab = 'pivot' | 'filters';

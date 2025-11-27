@@ -1,8 +1,18 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, CheckIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FieldsKeeperBucket } from 'react-fields-keeper';
-import { useStore, selectActiveTab, selectPivotBuckets, selectFilterBuckets, selectFieldsPaneCollapsed } from '@/store/fieldsStore';
+import { FieldsKeeperBucket, type IFieldsKeeperBucket, type IFieldsKeeperItem, type ISuffixBucketNodeRendererProps } from 'react-fields-keeper';
+import {
+    useStore,
+    selectActiveTab,
+    selectPivotBuckets,
+    selectFilterBuckets,
+    selectFieldsPaneCollapsed,
+    type IColumnField,
+} from '@/store/fieldsStore';
 import { FilterBuilder } from '@/components/FilterBuilder';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+const AGGREGATION_OPTIONS = ['sum', 'average', 'min', 'max', 'count'];
 
 export const FieldsPane = () => {
     // Use store for all state management
@@ -12,10 +22,57 @@ export const FieldsPane = () => {
     const isCollapsed = useStore(selectFieldsPaneCollapsed);
     const setActiveTab = useStore((state) => state.setActiveTab);
     const setIsCollapsed = useStore((state) => state.setFieldsPaneCollapsed);
+    const setPivotBuckets = useStore((state) => state.setPivotBuckets);
 
     const columnsBucket = pivotBuckets.find((b) => b.id === 'columns');
     const valuesBucket = pivotBuckets.find((b) => b.id === 'values');
     const filtersBucket = filterBuckets.find((b) => b.id === 'filters');
+
+    const renderSuffixNode = (props: ISuffixBucketNodeRendererProps) => {
+        if (!valuesBucket || !columnsBucket) return null;
+
+        const { fieldItem } = props;
+
+        const pivotItem = valuesBucket?.items.find((i) => i.id === fieldItem.id);
+
+        const aggregation = pivotItem?.value?.aggregate;
+
+        const handleAggChange = (option: string) => {
+            const newBuckets: IFieldsKeeperBucket<IColumnField> = { ...valuesBucket };
+            if (newBuckets && newBuckets.items) {
+                newBuckets.items = newBuckets.items.map((item) => {
+                    if (item.id === fieldItem.id) {
+                        return {
+                            ...item,
+                            value: { ...item.value, aggregate: option },
+                        } as IFieldsKeeperItem<IColumnField>;
+                    }
+                    return item;
+                });
+            }
+            setPivotBuckets([columnsBucket, newBuckets]);
+        };
+
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    {AGGREGATION_OPTIONS.map((option) => (
+                        <DropdownMenuItem
+                            className="flex items-center justify-between capitalize text-xs cursor-pointer"
+                            key={option}
+                            onClick={() => handleAggChange(option)}
+                        >
+                            {option}
+                            {aggregation === option && <CheckIcon className="ml-2 h-4 w-4" />}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
+    };
 
     if (isCollapsed) {
         return (
@@ -72,7 +129,13 @@ export const FieldsPane = () => {
                                 <h4 className="text-xs font-semibold">Values</h4>
                                 <span className="text-xs text-muted-foreground">{valuesBucket?.items.length || 0}</span>
                             </div>
-                            <FieldsKeeperBucket instanceId="pivot" id="values" allowRemoveFields emptyFieldPlaceholder="Drag fields here" />
+                            <FieldsKeeperBucket
+                                instanceId="pivot"
+                                id="values"
+                                suffixNodeRenderer={renderSuffixNode}
+                                allowRemoveFields
+                                emptyFieldPlaceholder="Drag fields here"
+                            />
                         </div>
                     </div>
                 ) : (
