@@ -1,11 +1,12 @@
 import { MainHeader } from './features/MainHeader';
 import { DataPane } from './features/DataPane';
-import { FieldsPane } from './features/FieldsPane';
+import { PivotPane } from './features/PivotPane';
 import { TableView } from './features/TableView';
 import { ProcessingIndicator } from './components/ProcessingIndicator';
 import { useStore, selectError } from './store/fieldsStore';
 import './features/fields-keeper-custom.css';
 import DataProvider from './features/DataProvider';
+import { FilterPane } from './features/FilterPane';
 
 const App: React.FC = () => {
     // Store selectors
@@ -26,7 +27,8 @@ const App: React.FC = () => {
 
             <DataProvider>
                 <DataPane />
-                <FieldsPane />
+                <PivotPane />
+                <FilterPane />
                 <TableView />
             </DataProvider>
 
