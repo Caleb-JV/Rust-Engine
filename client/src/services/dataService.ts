@@ -375,14 +375,14 @@ class DataService {
                         type: colBuffer.dataType,
                     });
                 }
-                const stringifiedRows = JSON.stringify(parsedRows, (_, value) =>
+                const stringifiedRows = JSON.stringify(this.resultSchema, (_, value) =>
                     typeof value === 'bigint'
                         ? value.toString() // Convert BigInt to string
                         : value,
                 );
                 const stringifiedPivot = JSON.stringify(['Tags']);
                 const stringifiedAggregationMap = JSON.stringify({ Parent: 'sum' });
-                parsedRows = JSON.parse(
+                this.resultSchema = JSON.parse(
                     (await this.workerClient.getProcessedData(stringifiedRows, stringifiedPivot, stringifiedAggregationMap)).data,
                 );
                 const reconstructTime = performance.now() - reconstructStart;

@@ -3,7 +3,7 @@ import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SortBuilder } from './SortBuilder';
-import { type SortSpec } from '../services/dataService';
+import { dataService, type SortSpec } from '../services/dataService';
 
 interface FilterBuilderProps {
     onApply?: () => void;
@@ -16,18 +16,16 @@ export function SortPane({ onApply }: FilterBuilderProps) {
     const [sortOpen, setSortOpen] = useState(false);
 
     const applySorts = async () => {
-        if (sorts.length === 0) {
-            setError('No sorts to apply');
-            return;
-        }
-
         setLoading(true);
         setError(null);
-
         try {
+            const query: { sort?: SortSpec[] } = {};
+            if (sorts.length > 0) query.sort = sorts;
+
+            dataService.getData(query);
             onApply?.();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to apply sorts');
+            setError(err instanceof Error ? err.message : 'Failed to apply filters/sorts');
         } finally {
             setLoading(false);
         }
