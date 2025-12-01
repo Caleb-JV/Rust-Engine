@@ -13,7 +13,7 @@ const App: React.FC = () => {
     const error = useStore(selectError);
 
     return (
-        <div className="min-h-screen bg-background grid grid-rows-[auto_1fr]">
+        <div className=" bg-background grid grid-rows-[auto_1fr] overflow-y-hidden">
             <MainHeader />
 
             {error && (

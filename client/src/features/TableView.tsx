@@ -41,7 +41,7 @@ export const TableView = () => {
     }
 
     return (
-        <div className="flex-1 overflow-auto p-4 h-screen">
+        <div className="flex-1 overflow-auto p-4">
             <Card className="h-full flex flex-col">
                 <CardHeader className="pb-3 border-b">
                     <CardTitle>Data Preview</CardTitle>

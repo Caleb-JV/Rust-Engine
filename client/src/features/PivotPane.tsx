@@ -26,7 +26,7 @@ export const PivotPane = () => {
     }
 
     return (
-        <div className="h-screen flex flex-col border-r bg-background overflow-auto shrink-0" style={{ width: '280px' }}>
+        <div className=" flex flex-col border-r bg-background overflow-auto shrink-0" style={{ width: '280px' }}>
             <div className="flex items-center justify-between px-3 py-2 border-b">
                 <h3 className="font-semibold">Pivot</h3>
                 <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(true)}>
