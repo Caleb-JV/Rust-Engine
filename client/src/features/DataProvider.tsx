@@ -47,7 +47,7 @@ export default function DataProvider(props: IDataProvider) {
     };
 
     return (
-        <main className="grid grid-cols-[auto_auto_auto_1fr] h-full">
+        <main className="grid grid-cols-[auto_auto_auto_1fr] h-[calc(100vh-68px)]">
             <FieldsKeeperProvider instanceId="pivot" allItems={allPivotItems} buckets={pivotBuckets} onUpdate={onPivotUpdate}>
                 <FieldsKeeperProvider instanceId="filters" allItems={allPivotItems} buckets={filterBuckets} onUpdate={onFilterUpdate}>
                     {children}

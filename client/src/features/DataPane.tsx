@@ -78,7 +78,7 @@ export const DataPane = () => {
         return (
             <div
                 className={`
-                relative h-screen flex flex-col border-r transition-all
+                relative flex flex-col border-r transition-all
                 bg-background
                 ${isDragging ? 'outline-2 outline-primary/40 bg-primary/5' : ''}
             `}
@@ -134,7 +134,7 @@ export const DataPane = () => {
     }
 
     return (
-        <div className="h-screen flex flex-col border-r bg-background" style={{ width: '280px' }}>
+        <div className="flex flex-col border-r bg-background" style={{ width: '280px' }}>
             <div className="flex items-center justify-between px-3 py-2 border-b">
                 <div className="flex items-center gap-2">
                     <h3 className="font-semibold">Data</h3>
