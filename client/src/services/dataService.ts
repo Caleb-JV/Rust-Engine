@@ -13,7 +13,7 @@ import {
     DateMillisecond,
     TimestampMillisecond,
 } from 'apache-arrow';
-import type { Row, TableData, ArrowColumnBuffer, ColumnBufferResponse } from '../types';
+import type { Row, TableData } from '../types';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
@@ -64,6 +64,21 @@ export interface DataQuery {
     pivot?: PivotSpec;
     limit?: number;
     offset?: number;
+}
+
+interface ArrowColumnBuffer {
+    name: string;
+    dataType: 'Int8' | 'Int16' | 'Int32' | 'Int64' | 'Float32' | 'Float64' | 'Boolean' | 'Utf8' | 'Date' | 'Timestamp';
+    length: number;
+    nullCount: number;
+    nullBitmap?: ArrayBuffer;
+    offsets?: ArrayBuffer;
+    values: ArrayBuffer;
+}
+
+interface ColumnBufferResponse {
+    columns: ArrowColumnBuffer[];
+    rowCount: number;
 }
 
 /**

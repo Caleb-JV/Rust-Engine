@@ -2,8 +2,9 @@ import { useRef, useState } from 'react';
 import { Upload, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FieldsKeeperRootBucket, FieldsKeeperSearcher } from 'react-fields-keeper';
-import { useStore, selectActiveTab, selectDataPaneCollapsed, selectProcessingStatus } from '@/store/fieldsStore';
+import { useStore, selectDataPaneCollapsed, selectProcessingStatus } from '@/store/fieldsStore';
 import { dataService } from '@/services/dataService';
+import { CollapsedPaneComponent, PanelHeader } from '@/components/PaneChrome';
 
 export const DataPane = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -12,7 +13,6 @@ export const DataPane = () => {
 
     // Use store for state management
     const processingStatus = useStore(selectProcessingStatus);
-    const activeTab = useStore(selectActiveTab);
     const isCollapsed = useStore(selectDataPaneCollapsed);
     const fileName = useStore((state) => state.fileName);
     const setIsCollapsed = useStore((state) => state.setDataPaneCollapsed);
@@ -63,16 +63,8 @@ export const DataPane = () => {
 
     const isLoading = processingStatus === 'loading' || processingStatus === 'processing';
 
-    if (isCollapsed) {
-        return (
-            <div className="h-full w-12 border-r bg-background flex flex-col items-center py-2">
-                <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(false)} className="mb-4">
-                    <ChevronLeft className="h-4 w-4 rotate-180" />
-                </Button>
-                <div className="[writing-mode:vertical-lr] text-sm font-semibold">Data</div>
-            </div>
-        );
-    }
+    if (isCollapsed)
+        return <CollapsedPaneComponent label="Data" onExpand={() => setIsCollapsed(false)} icon={<ChevronLeft className="h-4 w-4 rotate-180" />} />;
 
     if (!fileName) {
         return (
@@ -87,12 +79,7 @@ export const DataPane = () => {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <div className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm">
-                    <h3 className="font-semibold">Data</h3>
-                    <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(true)}>
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                </div>
+                <PanelHeader title="Data" onCollapse={() => setIsCollapsed(true)} className="bg-background/80 backdrop-blur-sm px-4" />
 
                 {/* Main Drop Zone */}
                 <div
@@ -135,15 +122,9 @@ export const DataPane = () => {
 
     return (
         <div className="flex flex-col border-r bg-background" style={{ width: '280px' }}>
-            <div className="flex items-center justify-between px-3 py-2 border-b">
-                <div className="flex items-center gap-2">
-                    <h3 className="font-semibold">Data</h3>
-                    {metadata && <p className="text-xs text-muted-foreground">{metadata.column_count} fields</p>}
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(true)}>
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-            </div>
+            <PanelHeader title="Data" onCollapse={() => setIsCollapsed(true)}>
+                {metadata && <p className="text-xs text-muted-foreground">{metadata.column_count} fields</p>}
+            </PanelHeader>
 
             {/* Action Buttons */}
             {hasData && (
@@ -165,7 +146,7 @@ export const DataPane = () => {
 
             <div className="flex-1 overflow-y-auto p-3 pl-0">
                 <FieldsKeeperRootBucket
-                    instanceId={activeTab}
+                    instanceId={'pivot'}
                     prefixNode={{ allow: true, reserveSpace: false }}
                     customSearchQuery={searchQuery}
                     emptyFilterMessage="No fields found"

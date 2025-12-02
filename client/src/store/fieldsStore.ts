@@ -10,7 +10,7 @@ export interface IColumnField {
     aggregate?: TAggregationType;
 }
 
-export type ActiveTab = 'pivot' | 'filters';
+export type ActiveTab = 'sorts' | 'filters';
 
 export type ProcessingStatus = 'idle' | 'loading' | 'processing' | 'success' | 'error';
 
@@ -54,10 +54,12 @@ interface IRootState {
     latestTiming: TimingLog | null;
 
     // UI State
-    activeTab: ActiveTab;
-    isDataPaneCollapsed: boolean;
-    isFieldsPaneCollapsed: boolean;
-    isPivotPaneCollapsed: boolean;
+    panelState: {
+        activeTab: ActiveTab;
+        isDataPaneCollapsed: boolean;
+        isFiltersPaneCollapsed: boolean;
+        isPivotPaneCollapsed: boolean;
+    };
 
     // Pivot Buckets
     pivotBuckets: IFieldsKeeperBucket<IColumnField>[];
@@ -77,7 +79,7 @@ interface IRootState {
     incrementTableRenderCounter: () => void;
     setLatestTiming: (log: TimingLog | null) => void;
     setDataPaneCollapsed: (collapsed: boolean) => void;
-    setFieldsPaneCollapsed: (collapsed: boolean) => void;
+    setFiltersPaneCollapsed: (collapsed: boolean) => void;
     setPivotPaneCollapsed: (collapsed: boolean) => void;
     setPivotBuckets: (buckets: IFieldsKeeperBucket<IColumnField>[]) => void;
     setFilterBuckets: (buckets: IFieldsKeeperBucket<IColumnField>[]) => void;
@@ -90,10 +92,12 @@ interface IRootState {
 const initialState = {
     processingStatus: 'idle' as ProcessingStatus,
     error: null,
-    activeTab: 'pivot' as ActiveTab,
-    isDataPaneCollapsed: false,
-    isFieldsPaneCollapsed: true,
-    isPivotPaneCollapsed: true,
+    panelState: {
+        activeTab: 'filters' as ActiveTab,
+        isDataPaneCollapsed: false,
+        isFiltersPaneCollapsed: true,
+        isPivotPaneCollapsed: true,
+    },
     tableRenderCounter: 0,
     latestTiming: null,
     pivotBuckets: [
@@ -125,36 +129,37 @@ export const useStore = create<IRootState>()(
             setLatestTiming: (log) => set({ latestTiming: log }, false, 'setLatestTiming'),
 
             // UI Actions
-            setActiveTab: (tab) => set({ activeTab: tab }, false, 'setActiveTab'),
+            setActiveTab: (tab) =>
+                set(
+                    (state) => ({
+                        panelState: { ...state.panelState, activeTab: tab },
+                    }),
+                    false,
+                    'setActiveTab',
+                ),
 
             setDataPaneCollapsed: (collapsed: boolean) =>
                 set(
                     (state) => ({
-                        isDataPaneCollapsed: collapsed,
-                        // if this pane is being opened (collapsed = false), close others
-                        isFieldsPaneCollapsed: collapsed ? state.isFieldsPaneCollapsed : true,
-                        isPivotPaneCollapsed: collapsed ? state.isPivotPaneCollapsed : true,
+                        panelState: { ...state.panelState, isDataPaneCollapsed: collapsed },
                     }),
                     false,
                     'setDataPaneCollapsed',
                 ),
 
-            setFieldsPaneCollapsed: (collapsed: boolean) =>
+            setFiltersPaneCollapsed: (collapsed: boolean) =>
                 set(
                     (state) => ({
-                        isFieldsPaneCollapsed: collapsed,
-                        isDataPaneCollapsed: collapsed ? state.isDataPaneCollapsed : true,
-                        isPivotPaneCollapsed: collapsed ? state.isPivotPaneCollapsed : true,
+                        panelState: { ...state.panelState, isFiltersPaneCollapsed: collapsed },
                     }),
                     false,
-                    'setFieldsPaneCollapsed',
+                    'setFiltersPaneCollapsed',
                 ),
 
             setPivotPaneCollapsed: (collapsed: boolean) =>
                 set(
                     (state) => ({
-                        isPivotPaneCollapsed: collapsed,
-                        isFieldsPaneCollapsed: collapsed ? state.isFieldsPaneCollapsed : true,
+                        panelState: { ...state.panelState, isPivotPaneCollapsed: collapsed },
                     }),
                     false,
                     'setPivotPaneCollapsed',
@@ -220,10 +225,10 @@ export const useStore = create<IRootState>()(
 // Selectors for optimized re-renders
 export const selectProcessingStatus = (state: IRootState) => state.processingStatus;
 export const selectError = (state: IRootState) => state.error;
-export const selectActiveTab = (state: IRootState) => state.activeTab;
+export const selectActiveTab = (state: IRootState) => state.panelState.activeTab;
 export const selectPivotBuckets = (state: IRootState) => state.pivotBuckets;
 export const selectFilterBuckets = (state: IRootState) => state.filterBuckets;
-export const selectDataPaneCollapsed = (state: IRootState) => state.isDataPaneCollapsed;
-export const selectFieldsPaneCollapsed = (state: IRootState) => state.isFieldsPaneCollapsed;
-export const selectPivotPaneCollapsed = (state: IRootState) => state.isPivotPaneCollapsed;
+export const selectDataPaneCollapsed = (state: IRootState) => state.panelState.isDataPaneCollapsed;
+export const selectFiltersPaneCollapsed = (state: IRootState) => state.panelState.isFiltersPaneCollapsed;
+export const selectPivotPaneCollapsed = (state: IRootState) => state.panelState.isPivotPaneCollapsed;
 export const selectFiltercondition = (state: IRootState) => state.filterCondition;
