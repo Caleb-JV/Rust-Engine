@@ -15,10 +15,8 @@ export default function DataProvider(props: IDataProvider) {
     // state
     const pivotBuckets = useStore((state) => state.pivotBuckets);
     const processingStatus = useStore((state) => state.processingStatus);
-    const filterBuckets = useStore((state) => state.filterBuckets);
     const fileName = useStore((state) => state.fileName);
     const setPivotBuckets = useStore((state) => state.setPivotBuckets);
-    const setFilterBuckets = useStore((state) => state.setFilterBuckets);
 
     // Get all field items from service
 
@@ -40,18 +38,10 @@ export default function DataProvider(props: IDataProvider) {
         if (columnNames.length > 0) dataService.getData({ columns: columnNames });
     };
 
-    // Filter update handler
-    const onFilterUpdate = (state: { buckets: typeof filterBuckets }) => {
-        setFilterBuckets(state.buckets);
-        // TODO: Apply filters to data
-    };
-
     return (
         <main className="grid grid-cols-[auto_auto_auto_1fr] h-[calc(100vh-68px)]">
             <FieldsKeeperProvider instanceId="pivot" allItems={allPivotItems} buckets={pivotBuckets} onUpdate={onPivotUpdate}>
-                <FieldsKeeperProvider instanceId="filters" allItems={allPivotItems} buckets={filterBuckets} onUpdate={onFilterUpdate}>
-                    {children}
-                </FieldsKeeperProvider>
+                {children}
             </FieldsKeeperProvider>
         </main>
     );

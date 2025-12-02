@@ -214,30 +214,17 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     return real;
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_externrefs.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
-}
-/**
- * ------------------------------------------------------------------
- *   STREAMING API: Finalize streaming (returns total row count)
- * ------------------------------------------------------------------
- * @returns {number}
- */
-export function seed_finalize() {
-    const ret = wasm.seed_finalize();
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] >>> 0;
-}
-
 function passArray8ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 1, 1) >>> 0;
     getUint8ArrayMemory0().set(arg, ptr / 1);
     WASM_VECTOR_LEN = arg.length;
     return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_externrefs.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
 }
 /**
  * ------------------------------------------------------------------
@@ -271,6 +258,33 @@ export function seed_chunk(chunk_bytes, has_header) {
 }
 
 /**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Finalize streaming (returns total row count)
+ * ------------------------------------------------------------------
+ * @returns {number}
+ */
+export function seed_finalize() {
+    const ret = wasm.seed_finalize();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] >>> 0;
+}
+
+/**
+ * Async version of get_data with a structured response envelope
+ * Returns { columns: [...], rowCount: number } instead of IPC bytes
+ * @param {string} query_json
+ * @returns {Promise<any>}
+ */
+export function get_data_async(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_async(ptr0, len0);
+    return ret;
+}
+
+/**
  * Async version of get_processed_data with a structured response envelope
  * @param {string} data
  * @param {string} pivot
@@ -289,36 +303,11 @@ export function get_processed_data_async(data, pivot, aggregationMap) {
 }
 
 /**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- * @param {string} query_json
- * @returns {Promise<any>}
- */
-export function get_data_async(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_async(ptr0, len0);
-    return ret;
-}
-
-/**
  * Async WASM export: get meta data with a structured response
  * @returns {Promise<any>}
  */
 export function get_meta_data_async() {
     const ret = wasm.get_meta_data_async();
-    return ret;
-}
-
-/**
- * Async version of get_filter_options with a structured response envelope
- * @param {string} col_name
- * @returns {Promise<any>}
- */
-export function get_filter_options_async(col_name) {
-    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_filter_options_async(ptr0, len0);
     return ret;
 }
 
@@ -335,10 +324,15 @@ export function seed_async(bytes) {
 }
 
 /**
- * Clear the timing log
+ * Async version of get_filter_options with a structured response envelope
+ * @param {string} col_name
+ * @returns {Promise<any>}
  */
-export function clear_timing_log() {
-    wasm.clear_timing_log();
+export function get_filter_options_async(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options_async(ptr0, len0);
+    return ret;
 }
 
 /**
@@ -350,12 +344,19 @@ export function get_timing_log() {
     return ret;
 }
 
-function wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2);
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log() {
+    wasm.clear_timing_log();
 }
 
-function wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3);
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
@@ -440,7 +441,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(a, state0.b, arg0, arg1);
+                    return wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -520,7 +521,7 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbindgen_cast_69691c1f6f8ce68b = function(arg0, arg1) {
         // Cast intrinsic for `Closure(Closure { dtor_idx: 822, function: Function { arguments: [Externref], shim_idx: 823, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h56051a08f764ac79, wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8);
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
         return ret;
     };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {

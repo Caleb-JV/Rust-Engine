@@ -14,7 +14,6 @@ export interface FilterOptionResponse {
 export const FilterComponent = () => {
     const pivotBuckets = useStore(selectPivotBuckets);
     const filterConditions = useStore(selectFiltercondition);
-    const fileName = useStore((state) => state.fileName);
     const addOrUpdateFilterCondition = useStore((state) => state.addOrUpdateFilterCondition);
     const removeFilterCondition = useStore((state) => state.removeFilterCondition);
 
