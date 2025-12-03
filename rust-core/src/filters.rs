@@ -1,5 +1,5 @@
 use arrow_array::{
-    Array, ArrayRef, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray,
+    Array, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray,
     builder::BooleanBuilder,
 };
 use arrow_schema::DataType;
@@ -183,8 +183,8 @@ fn apply_string_filter_kernel(
             let val = condition.value.as_str()?;
             let rhs = StringArray::from(vec![val; array.len()]);
 
-            let matches = like::contains_utf8(array, &rhs)
-                .map_err(|e| js_err(&format!("contains_utf8 error: {}", e)))?;
+            let matches = like::contains(array, &rhs)
+                .map_err(|e| js_err(&format!("contains error: {}", e)))?;
 
             if matches.len() != array.len() {
                 return Err(js_err("Contains result length mismatch"));

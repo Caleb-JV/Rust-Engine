@@ -7,6 +7,7 @@ use js_sys::Date;
 static TIMING_LOG: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 /// Simple timing helper for synchronous functions
+#[allow(dead_code)]
 pub fn timed<F, R>(label: &str, func: F) -> R
 where
     F: FnOnce() -> R,
@@ -38,6 +39,7 @@ where
 }
 
 /// Simple timing helper for async functions
+#[allow(dead_code)]
 pub async fn timed_async<F, Fut, R>(label: &str, func: F) -> R
 where
     F: FnOnce() -> Fut,

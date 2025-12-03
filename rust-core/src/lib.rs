@@ -443,6 +443,6 @@ pub(crate) fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 	operations::get_filter_options(col_name)
 }
 
-pub(crate) fn get_processed_data(data: &str,pivot:&str,aggregationMap:&str) -> Result<JsValue, JsValue> {
-	operations::get_processed_data(data,pivot,aggregationMap)
+pub(crate) fn get_processed_data(data: &str,pivot:&str,aggregation_map:&str) -> Result<JsValue, JsValue> {
+	operations::get_processed_data(data,pivot,aggregation_map)
 }

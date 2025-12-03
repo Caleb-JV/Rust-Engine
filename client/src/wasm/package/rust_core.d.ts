@@ -29,7 +29,7 @@ export function get_timing_log(): any;
 /**
  * Async version of get_processed_data with a structured response envelope
  */
-export function get_processed_data_async(data: string, pivot: string, aggregationMap: string): Promise<any>;
+export function get_processed_data_async(data: string, pivot: string, aggregation_map: string): Promise<any>;
 /**
  * Async version of get_filter_options with a structured response envelope
  */

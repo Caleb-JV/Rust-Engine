@@ -291,15 +291,15 @@ export function get_timing_log() {
  * Async version of get_processed_data with a structured response envelope
  * @param {string} data
  * @param {string} pivot
- * @param {string} aggregationMap
+ * @param {string} aggregation_map
  * @returns {Promise<any>}
  */
-export function get_processed_data_async(data, pivot, aggregationMap) {
+export function get_processed_data_async(data, pivot, aggregation_map) {
     const ptr0 = passStringToWasm0(data, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(pivot, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passStringToWasm0(aggregationMap, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr2 = passStringToWasm0(aggregation_map, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len2 = WASM_VECTOR_LEN;
     const ret = wasm.get_processed_data_async(ptr0, len0, ptr1, len1, ptr2, len2);
     return ret;

@@ -84,9 +84,9 @@ pub fn get_filter_options_async(col_name: String) -> js_sys::Promise {
 
 /// Async version of get_processed_data with a structured response envelope
 #[wasm_bindgen]
-pub fn get_processed_data_async(data: String,pivot:String,aggregationMap:String) -> js_sys::Promise {
+pub fn get_processed_data_async(data: String,pivot:String,aggregation_map:String) -> js_sys::Promise {
     future_to_promise(async move {
-        let (result, duration) = measure(|| get_processed_data(&data,&pivot,&aggregationMap));
+        let (result, duration) = measure(|| get_processed_data(&data,&pivot,&aggregation_map));
 
         match result {
             Ok(options) => Ok(build_response(options, true, "", duration)),
