@@ -1,11 +1,81 @@
-use arrow_array::{Array, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray};
+use arrow_array::{
+    Array, ArrayRef, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray,
+    builder::BooleanBuilder,
+};
 use arrow_schema::DataType;
 use wasm_bindgen::JsValue;
+
+use arrow_ord::cmp;
+use arrow_arith::boolean as boolean_kernels;
+use arrow_select::filter::filter_record_batch;
+use arrow_string::like;
 
 use crate::error::js_err;
 use crate::query_types::{FilterCondition, FilterOperator, FilterValue};
 
-/// Apply filters to record batches
+
+/// Extension helpers for FilterValue so we don't repeat matches everywhere.
+trait FilterValueExt {
+    fn as_i64(&self) -> Result<i64, JsValue>;
+    fn as_f64(&self) -> Result<f64, JsValue>;
+    fn as_str(&self) -> Result<&str, JsValue>;
+    fn as_bool(&self) -> Result<bool, JsValue>;
+    fn as_array_str(&self) -> Result<&[String], JsValue>;
+    fn as_range_i64(&self) -> Result<(i64, i64), JsValue>;
+    fn as_range_f64(&self) -> Result<(f64, f64), JsValue>;
+}
+impl FilterValueExt for FilterValue {
+    fn as_i64(&self) -> Result<i64, JsValue> {
+        match self {
+            FilterValue::Number(n) => Ok(*n as i64),
+            _ => Err(js_err("Expected numeric value")),
+        }
+    }
+
+    fn as_f64(&self) -> Result<f64, JsValue> {
+        match self {
+            FilterValue::Number(n) => Ok(*n),
+            _ => Err(js_err("Expected numeric value")),
+        }
+    }
+
+    fn as_str(&self) -> Result<&str, JsValue> {
+        match self {
+            FilterValue::String(s) => Ok(s.as_str()),
+            _ => Err(js_err("Expected string value")),
+        }
+    }
+
+    fn as_bool(&self) -> Result<bool, JsValue> {
+        match self {
+            FilterValue::Boolean(b) => Ok(*b),
+            _ => Err(js_err("Expected boolean value")),
+        }
+    }
+
+    fn as_array_str(&self) -> Result<&[String], JsValue> {
+        match self {
+            FilterValue::Array(v) => Ok(v.as_slice()),
+            _ => Err(js_err("Expected array of strings")),
+        }
+    }
+
+    fn as_range_i64(&self) -> Result<(i64, i64), JsValue> {
+        match self {
+            FilterValue::Range { min, max } => Ok((*min as i64, *max as i64)),
+            _ => Err(js_err("Expected range value")),
+        }
+    }
+
+    fn as_range_f64(&self) -> Result<(f64, f64), JsValue> {
+        match self {
+            FilterValue::Range { min, max } => Ok((*min, *max)),
+            _ => Err(js_err("Expected range value")),
+        }
+    }
+}
+
+/// Apply filters to record batches using Arrow vectorized kernels.
 pub fn apply_filters(
     batches: Vec<RecordBatch>,
     filters: &[FilterCondition],
@@ -28,55 +98,52 @@ pub fn apply_filters(
             let array = batch.column(col_index);
             let condition_mask = apply_filter_condition(array.as_ref(), condition)?;
 
-            filter_mask = match filter_mask {
-                None => Some(condition_mask),
-                Some(existing) => Some(and_masks(&existing, &condition_mask)?),
-            };
+            filter_mask = Some(match filter_mask {
+                None => condition_mask,
+                Some(existing) => boolean_kernels::and(&existing, &condition_mask)
+                    .map_err(|e| js_err(&format!("Mask AND error: {}", e)))?,
+            });
         }
 
         if let Some(mask) = filter_mask {
-            let filtered = arrow_select::filter::filter_record_batch(&batch, &mask)
+            let filtered = filter_record_batch(&batch, &mask)
                 .map_err(|e| js_err(&format!("Filter error: {}", e)))?;
 
             if filtered.num_rows() > 0 {
                 filtered_batches.push(filtered);
             }
-        } else {
-            filtered_batches.push(batch);
         }
     }
 
     Ok(filtered_batches)
 }
 
-/// Apply a single filter condition to an array
+/// Dispatch filter condition based on array datatype.
 fn apply_filter_condition(
     array: &dyn Array,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
-    use arrow_array::{Float64Array, Int64Array, StringArray};
-
     match array.data_type() {
         DataType::Utf8 | DataType::LargeUtf8 => {
             let arr = array
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| js_err("Failed to downcast to StringArray"))?;
-            apply_string_filter(arr, condition)
+            apply_string_filter_kernel(arr, condition)
         }
         DataType::Int64 => {
             let arr = array
                 .as_any()
                 .downcast_ref::<Int64Array>()
                 .ok_or_else(|| js_err("Failed to downcast to Int64Array"))?;
-            apply_numeric_filter_i64(arr, condition)
+            apply_numeric_filter_i64_kernel(arr, condition)
         }
         DataType::Float64 => {
             let arr = array
                 .as_any()
                 .downcast_ref::<Float64Array>()
                 .ok_or_else(|| js_err("Failed to downcast to Float64Array"))?;
-            apply_numeric_filter_f64(arr, condition)
+            apply_numeric_filter_f64_kernel(arr, condition)
         }
         DataType::Boolean => {
             let arr = array
@@ -85,390 +152,223 @@ fn apply_filter_condition(
                 .ok_or_else(|| js_err("Failed to downcast to BooleanArray"))?;
             apply_boolean_filter(arr, condition)
         }
-        dt => Err(js_err(&format!("Filtering not supported for type {:?}", dt))),
+        dt => Err(js_err(&format!(
+            "Filtering not supported for type {:?}",
+            dt
+        ))),
     }
 }
 
-/// Apply filter to string array
-fn apply_string_filter(
-    array: &dyn Array,
+/// String filters using Arrow string + boolean kernels.
+fn apply_string_filter_kernel(
+    array: &StringArray,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
-    let array = array
-        .as_any()
-        .downcast_ref::<StringArray>()
-        .ok_or_else(|| js_err("Failed to downcast to StringArray"))?;
-    let len = array.len();
-    let mut builder = arrow_array::builder::BooleanBuilder::with_capacity(len);
+    match condition.operator {
+        FilterOperator::Equals | FilterOperator::NotEquals => {
+            let val = condition.value.as_str()?;
+            let rhs = StringArray::from(vec![val; array.len()]);
 
-    match &condition.operator {
-        FilterOperator::Equals => {
-            if let FilterValue::String(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) == val);
-                    }
-                }
+            let mask = match condition.operator {
+                FilterOperator::Equals => cmp::eq(array, &rhs),
+                FilterOperator::NotEquals => cmp::neq(array, &rhs),
+                _ => unreachable!(),
+            }
+            .map_err(|e| js_err(&format!("String cmp error: {}", e)))?;
+
+            Ok(mask)
+        }
+
+        FilterOperator::Contains | FilterOperator::NotContains => {
+            let val = condition.value.as_str()?;
+            let rhs = StringArray::from(vec![val; array.len()]);
+
+            let matches = like::contains_utf8(array, &rhs)
+                .map_err(|e| js_err(&format!("contains_utf8 error: {}", e)))?;
+
+            if matches.len() != array.len() {
+                return Err(js_err("Contains result length mismatch"));
+            }
+
+            if let FilterOperator::Contains = condition.operator {
+                Ok(matches)
             } else {
-                return Err(js_err("String filter requires string value"));
+                // NOT CONTAINS
+                boolean_kernels::not(&matches)
+                    .map_err(|e| js_err(&format!("NOT error: {}", e)))
             }
         }
-        FilterOperator::NotEquals => {
-            if let FilterValue::String(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) != val);
-                    }
-                }
+
+        FilterOperator::In | FilterOperator::NotIn => {
+            let values = condition.value.as_array_str()?;
+            if values.is_empty() {
+                // IN [] -> always false
+                let mut builder =
+                    BooleanBuilder::with_capacity(array.len());
+                return Ok(builder.finish());
+            }
+
+            // OR-chain eq masks
+            let mut mask: Option<BooleanArray> = None;
+            for v in values {
+                let rhs = StringArray::from(vec![v.as_str(); array.len()]);
+                let eq = cmp::eq(array, &rhs)
+                    .map_err(|e| js_err(&format!("eq_utf8 error: {}", e)))?;
+
+                mask = Some(match mask {
+                    None => eq,
+                    Some(prev) => boolean_kernels::or(&prev, &eq)
+                        .map_err(|e| js_err(&format!("OR error: {}", e)))?,
+                });
+            }
+
+            let in_mask = mask.ok_or_else(|| js_err("IN with empty value list"))?;
+
+            if let FilterOperator::In = condition.operator {
+                Ok(in_mask)
             } else {
-                return Err(js_err("String filter requires string value"));
+                // NOT IN
+                boolean_kernels::not(&in_mask)
+                    .map_err(|e| js_err(&format!("NOT error: {}", e)))
             }
         }
-        FilterOperator::Contains => {
-            if let FilterValue::String(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i).contains(val.as_str()));
-                    }
-                }
-            } else {
-                return Err(js_err("Contains filter requires string value"));
-            }
-        }
-        FilterOperator::NotContains => {
-            if let FilterValue::String(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(!array.value(i).contains(val.as_str()));
-                    }
-                }
-            } else {
-                return Err(js_err("NotContains filter requires string value"));
-            }
-        }
-        FilterOperator::In => {
-            if let FilterValue::Array(vals) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(vals.contains(&array.value(i).to_string()));
-                    }
-                }
-            } else {
-                return Err(js_err("In filter requires array value"));
-            }
-        }
-        FilterOperator::NotIn => {
-            if let FilterValue::Array(vals) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(!vals.contains(&array.value(i).to_string()));
-                    }
-                }
-            } else {
-                return Err(js_err("NotIn filter requires array value"));
-            }
-        }
-        _ => return Err(js_err("Unsupported operator for string type")),
+
+        _ => Err(js_err("Unsupported operator for string type")),
     }
-
-    Ok(builder.finish())
 }
 
-/// Apply filter to Int64 array
-fn apply_numeric_filter_i64(
-    array: &dyn Array,
+/// Int64 filters using Arrow cmp + boolean kernels.
+fn apply_numeric_filter_i64_kernel(
+    array: &Int64Array,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
-    let array = array
-        .as_any()
-        .downcast_ref::<Int64Array>()
-        .ok_or_else(|| js_err("Failed to downcast to Int64Array"))?;
     let len = array.len();
-    let mut builder = arrow_array::builder::BooleanBuilder::with_capacity(len);
 
-    match &condition.operator {
-        FilterOperator::Equals => {
-            if let FilterValue::Number(val) = &condition.value {
-                let val_i64 = *val as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) == val_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
+    let mask = match condition.operator {
+        FilterOperator::Equals
+        | FilterOperator::NotEquals
+        | FilterOperator::GreaterThan
+        | FilterOperator::LessThan
+        | FilterOperator::GreaterThanOrEqual
+        | FilterOperator::LessThanOrEqual => {
+            let val = condition.value.as_i64()?;
+            let rhs = Int64Array::from(vec![val; len]);
+
+            let res = match condition.operator {
+                FilterOperator::Equals => cmp::eq(array, &rhs),
+                FilterOperator::NotEquals => cmp::neq(array, &rhs),
+                FilterOperator::GreaterThan => cmp::gt(array, &rhs),
+                FilterOperator::LessThan => cmp::lt(array, &rhs),
+                FilterOperator::GreaterThanOrEqual => cmp::gt_eq(array, &rhs),
+                FilterOperator::LessThanOrEqual => cmp::lt_eq(array, &rhs),
+                _ => unreachable!(),
+            };
+
+            res.map_err(|e| js_err(&format!("Int64 cmp error: {}", e)))?
         }
-        FilterOperator::NotEquals => {
-            if let FilterValue::Number(val) = &condition.value {
-                let val_i64 = *val as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) != val_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::GreaterThan => {
-            if let FilterValue::Number(val) = &condition.value {
-                let val_i64 = *val as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) > val_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::LessThan => {
-            if let FilterValue::Number(val) = &condition.value {
-                let val_i64 = *val as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) < val_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::GreaterThanOrEqual => {
-            if let FilterValue::Number(val) = &condition.value {
-                let val_i64 = *val as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) >= val_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::LessThanOrEqual => {
-            if let FilterValue::Number(val) = &condition.value {
-                let val_i64 = *val as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) <= val_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
+
         FilterOperator::Between => {
-            if let FilterValue::Range { min, max } = &condition.value {
-                let min_i64 = *min as i64;
-                let max_i64 = *max as i64;
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        let v = array.value(i);
-                        builder.append_value(v >= min_i64 && v <= max_i64);
-                    }
-                }
-            } else {
-                return Err(js_err("Between filter requires range value"));
-            }
-        }
-        _ => return Err(js_err("Unsupported operator for numeric type")),
-    }
+            let (min_i64, max_i64) = condition.value.as_range_i64()?;
 
-    Ok(builder.finish())
+            let min_arr = Int64Array::from(vec![min_i64; len]);
+            let max_arr = Int64Array::from(vec![max_i64; len]);
+
+            let ge = cmp::gt_eq(array, &min_arr)
+                .map_err(|e| js_err(&format!("Int64 >= error: {}", e)))?;
+            let le = cmp::lt_eq(array, &max_arr)
+                .map_err(|e| js_err(&format!("Int64 <= error: {}", e)))?;
+
+            boolean_kernels::and(&ge, &le)
+                .map_err(|e| js_err(&format!("Int64 BETWEEN AND error: {}", e)))?
+        }
+
+        _ => return Err(js_err("Unsupported operator for Int64")),
+    };
+
+    Ok(mask)
 }
 
-/// Apply filter to Float64 array
-fn apply_numeric_filter_f64(
-    array: &dyn Array,
+/// Float64 filters using Arrow cmp + boolean kernels.
+fn apply_numeric_filter_f64_kernel(
+    array: &Float64Array,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
-    let array = array
-        .as_any()
-        .downcast_ref::<Float64Array>()
-        .ok_or_else(|| js_err("Failed to downcast to Float64Array"))?;
     let len = array.len();
-    let mut builder = arrow_array::builder::BooleanBuilder::with_capacity(len);
 
-    match &condition.operator {
-        FilterOperator::Equals => {
-            if let FilterValue::Number(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value((array.value(i) - val).abs() < f64::EPSILON);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
+    let mask = match condition.operator {
+        FilterOperator::Equals
+        | FilterOperator::NotEquals
+        | FilterOperator::GreaterThan
+        | FilterOperator::LessThan
+        | FilterOperator::GreaterThanOrEqual
+        | FilterOperator::LessThanOrEqual => {
+            let val = condition.value.as_f64()?;
+            let rhs = Float64Array::from(vec![val; len]);
+
+            let res = match condition.operator {
+                FilterOperator::Equals => cmp::eq(array, &rhs),
+                FilterOperator::NotEquals => cmp::neq(array, &rhs),
+                FilterOperator::GreaterThan => cmp::gt(array, &rhs),
+                FilterOperator::LessThan => cmp::lt(array, &rhs),
+                FilterOperator::GreaterThanOrEqual => cmp::gt_eq(array, &rhs),
+                FilterOperator::LessThanOrEqual => cmp::lt_eq(array, &rhs),
+                _ => unreachable!(),
+            };
+
+            res.map_err(|e| js_err(&format!("Float64 cmp error: {}", e)))?
         }
-        FilterOperator::NotEquals => {
-            if let FilterValue::Number(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value((array.value(i) - val).abs() >= f64::EPSILON);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::GreaterThan => {
-            if let FilterValue::Number(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) > *val);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::LessThan => {
-            if let FilterValue::Number(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) < *val);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::GreaterThanOrEqual => {
-            if let FilterValue::Number(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) >= *val);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
-        FilterOperator::LessThanOrEqual => {
-            if let FilterValue::Number(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) <= *val);
-                    }
-                }
-            } else {
-                return Err(js_err("Numeric filter requires number value"));
-            }
-        }
+
         FilterOperator::Between => {
-            if let FilterValue::Range { min, max } = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        let v = array.value(i);
-                        builder.append_value(v >= *min && v <= *max);
-                    }
-                }
-            } else {
-                return Err(js_err("Between filter requires range value"));
-            }
-        }
-        _ => return Err(js_err("Unsupported operator for numeric type")),
-    }
+            let (min_f64, max_f64) = condition.value.as_range_f64()?;
 
-    Ok(builder.finish())
+            let min_arr = Float64Array::from(vec![min_f64; len]);
+            let max_arr = Float64Array::from(vec![max_f64; len]);
+
+            let ge = cmp::gt_eq(array, &min_arr)
+                .map_err(|e| js_err(&format!("Float64 >= error: {}", e)))?;
+            let le = cmp::lt_eq(array, &max_arr)
+                .map_err(|e| js_err(&format!("Float64 <= error: {}", e)))?;
+
+            boolean_kernels::and(&ge, &le)
+                .map_err(|e| js_err(&format!("Float64 BETWEEN AND error: {}", e)))?
+        }
+
+        _ => return Err(js_err("Unsupported operator for Float64")),
+    };
+
+    Ok(mask)
 }
 
-/// Apply filter to Boolean array
+/// Boolean filters (tiny, so loop is fine; Arrow has no direct eq kernels for Boolean).
 fn apply_boolean_filter(
     array: &BooleanArray,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
     let len = array.len();
-    let mut builder = arrow_array::builder::BooleanBuilder::with_capacity(len);
+    let mut builder = BooleanBuilder::with_capacity(len);
 
-    match &condition.operator {
+    match condition.operator {
         FilterOperator::Equals => {
-            if let FilterValue::Boolean(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) == *val);
-                    }
+            let val = condition.value.as_bool()?;
+            for i in 0..len {
+                if array.is_null(i) {
+                    builder.append_value(false);
+                } else {
+                    builder.append_value(array.value(i) == val);
                 }
-            } else {
-                return Err(js_err("Boolean filter requires boolean value"));
             }
         }
         FilterOperator::NotEquals => {
-            if let FilterValue::Boolean(val) = &condition.value {
-                for i in 0..len {
-                    if array.is_null(i) {
-                        builder.append_value(false);
-                    } else {
-                        builder.append_value(array.value(i) != *val);
-                    }
+            let val = condition.value.as_bool()?;
+            for i in 0..len {
+                if array.is_null(i) {
+                    builder.append_value(false);
+                } else {
+                    builder.append_value(array.value(i) != val);
                 }
-            } else {
-                return Err(js_err("Boolean filter requires boolean value"));
             }
         }
         _ => return Err(js_err("Unsupported operator for boolean type")),
-    }
-
-    Ok(builder.finish())
-}
-
-/// AND two boolean masks together
-fn and_masks(a: &BooleanArray, b: &BooleanArray) -> Result<BooleanArray, JsValue> {
-    let len = a.len();
-    if len != b.len() {
-        return Err(js_err("Mask length mismatch"));
-    }
-
-    let mut builder = arrow_array::builder::BooleanBuilder::with_capacity(len);
-    for i in 0..len {
-        let a_val = !a.is_null(i) && a.value(i);
-        let b_val = !b.is_null(i) && b.value(i);
-        builder.append_value(a_val && b_val);
     }
 
     Ok(builder.finish())
