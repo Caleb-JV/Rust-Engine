@@ -41,6 +41,7 @@ interface IRootState {
     processingStatus: ProcessingStatus;
     error: string | null;
     tableRowCount?: number;
+    tableColumnCount?: number;
 
     /**
      * table gets rerendered only when this value changes
@@ -73,6 +74,7 @@ interface IRootState {
     // Actions
     setProcessingStatus: (status: ProcessingStatus) => void;
     setTableRowCount: (count: number) => void;
+    setTableColumnCount: (count: number) => void;
     setFileName: (name: string) => void;
     setError: (error: string | null) => void;
     setActiveTab: (tab: ActiveTab) => void;
@@ -117,6 +119,8 @@ export const useStore = create<IRootState>()(
             setProcessingStatus: (status) => set({ processingStatus: status }, false, 'setProcessingStatus'),
 
             setTableRowCount: (count) => set({ tableRowCount: count }, false, 'setTableRowCount'),
+
+            setTableColumnCount: (count) => set({ tableColumnCount: count }, false, 'setTableColumnCount'),
 
             setFileName: (name) => set({ fileName: name }, false, 'setFileName'),
 

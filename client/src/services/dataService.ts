@@ -335,6 +335,12 @@ class DataService {
             // 4. Convert metadata to FieldsKeeper items
             const allItems = this.createFieldItems();
 
+            // Update store with row and column counts from metadata
+            if (this.metadata) {
+                store.setTableRowCount(this.metadata.row_count);
+                store.setTableColumnCount(this.metadata.column_count);
+            }
+
             store.setProcessingStatus('success');
 
             return allItems;
