@@ -62,11 +62,20 @@ pub enum PivotAggregation {
     Max,
 }
 
+/// Pivot row specification coming from the frontend
+/// Matches TS: { column: string }
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PivotRowSpec {
+    pub column: String,
+}
+
 /// Pivot specification
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PivotSpec {
-    pub rows: Vec<String>,
-    pub columns: Option<Vec<String>>,
+    // Frontend sends: { rows: IColumnInfo[] (used as grouping keys) }
+    // We only need the column name here.
+    pub rows: Vec<PivotRowSpec>,
+    // All value columns (with aggregation) also come via pivot
     pub values: Vec<PivotValue>,
 }
 
@@ -74,7 +83,12 @@ pub struct PivotSpec {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PivotValue {
     pub column: String,
+    #[serde(default = "default_pivot_aggregation")]
     pub aggregation: PivotAggregation,
+}
+
+fn default_pivot_aggregation() -> PivotAggregation {
+    PivotAggregation::Sum
 }
 
 /// Complete query specification

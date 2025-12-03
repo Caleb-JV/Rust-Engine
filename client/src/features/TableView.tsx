@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { dataService } from '../services/dataService';
 import { useStore, selectProcessingStatus } from '../store/fieldsStore';
 import { useMemo, useRef } from 'react';
@@ -43,11 +43,11 @@ export const TableView = () => {
     return (
         <div className="flex-1 overflow-auto p-4">
             <Card className="h-full flex flex-col">
-                <CardHeader className="pb-3 border-b">
-                    <CardTitle>Data Preview</CardTitle>
-                    <CardDescription>
+                <CardHeader className="p-4 border-b flex flex-row items-center justify-between">
+                    <h3 className="text-md font-semibold">Table View</h3>
+                    <p className="text-sm text-muted-foreground">
                         {tableMetadata.rowCount.toLocaleString()} rows × {tableMetadata.columns.length} columns
-                    </CardDescription>
+                    </p>
                 </CardHeader>
 
                 <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">

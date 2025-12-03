@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SortBuilder } from './SortBuilder';
 import { dataService, type FilterCondition, type SortSpec } from '../services/dataService';
 import { useStore } from '@/store/fieldsStore';
@@ -14,7 +13,6 @@ export function SortPane({ onApply }: FilterBuilderProps) {
     const [sorts, setSorts] = useState<SortSpec[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [sortOpen, setSortOpen] = useState(false);
     const filterOptions = useStore.getState().filterCondition;
 
     const applySorts = async () => {
@@ -25,7 +23,7 @@ export function SortPane({ onApply }: FilterBuilderProps) {
             if (sorts.length > 0) query.sort = sorts;
             if (filterOptions.length > 0) query.filters = filterOptions;
 
-            dataService.getData(query);
+            dataService.getData();
             onApply?.();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to apply filters/sorts');
@@ -37,18 +35,7 @@ export function SortPane({ onApply }: FilterBuilderProps) {
     return (
         <div className="space-y-4">
             {/* Sort Options */}
-            <Collapsible open={sortOpen} onOpenChange={setSortOpen}>
-                <CollapsibleTrigger className="w-full">
-                    <Button variant="outline" size="sm" className="w-full justify-between" type="button">
-                        <span className="text-xs font-semibold">Sort Options {sorts.length > 0 && `(${sorts.length})`}</span>
-                        <span className="text-xs">{sortOpen ? '▲' : '▼'}</span>
-                    </Button>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent className="pt-3">
-                    <SortBuilder onSortChange={setSorts} />
-                </CollapsibleContent>
-            </Collapsible>
+            <SortBuilder onSortChange={setSorts} />
 
             {/* Apply Button */}
             <Button onClick={applySorts} disabled={loading || sorts.length === 0} className="w-full">
