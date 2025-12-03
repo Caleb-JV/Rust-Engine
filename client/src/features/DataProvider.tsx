@@ -14,7 +14,6 @@ export default function DataProvider(props: IDataProvider) {
 
     // state
     const pivotBuckets = useStore((state) => state.pivotBuckets);
-    const processingStatus = useStore((state) => state.processingStatus);
     const fileName = useStore((state) => state.fileName);
     const setPivotBuckets = useStore((state) => state.setPivotBuckets);
 
@@ -24,7 +23,7 @@ export default function DataProvider(props: IDataProvider) {
         if (fileName) return dataService.getAllFieldItems();
 
         return [];
-    }, [fileName, processingStatus]);
+    }, [fileName]);
 
     // Pivot update handler - triggers getData
     const onPivotUpdate = (state: { buckets: typeof pivotBuckets }) => {

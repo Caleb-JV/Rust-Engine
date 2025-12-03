@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::error::{js_err_arrow, js_err};
 
 /// Parse comma-separated column names
+#[allow(dead_code)]
 pub fn parse_cols(input: &str) -> Vec<String> {
     input
         .split(',')
@@ -39,6 +40,7 @@ pub fn to_simple_type(dt: &arrow_schema::DataType) -> &'static str {
 }
 
 /// Encode RecordBatches into Arrow IPC format
+#[allow(dead_code)]
 pub fn encode_ipc(schema: &SchemaRef, batches: &[RecordBatch]) -> Result<Vec<u8>, JsValue> {
     let mut out = Vec::new();
 

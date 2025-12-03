@@ -13,7 +13,6 @@ import {
     DateMillisecond,
     TimestampMillisecond,
 } from 'apache-arrow';
-import type { Row, TableData } from '../types';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
@@ -332,7 +331,11 @@ class DataService {
 
             console.log('Metadata received:', this.metadata);
 
-            // 4. Convert metadata to FieldsKeeper items
+            // 4. Set row and column counts in store
+            store.setTableRowCount(this.metadata.row_count);
+            store.setTableColumnCount(this.metadata.columns.length);
+
+            // 5. Convert metadata to FieldsKeeper items
             const allItems = this.createFieldItems();
 
             store.setProcessingStatus('success');
@@ -410,9 +413,13 @@ class DataService {
                 console.log(`  └─ Total (main thread): ${totalMainThreadTime.toFixed(2)}ms`);
                 console.log(`[DataService] Rows: ${this.rowCount.toLocaleString()}, Columns: ${this.resultSchema.length}`);
 
+                // Update row and column counts
+                store.setTableRowCount(this.rowCount);
+                store.setTableColumnCount(this.resultSchema.length);
+
                 const timing: TimingLog = {
                     operation: 'Processing Query',
-                    duration_ms: totalMainThreadTime,
+                    duration_ms: response.timeTaken,
                 };
                 store.setLatestTiming(timing);
                 store.setProcessingStatus('success');
@@ -450,32 +457,6 @@ class DataService {
             console.error('[DataService] Error getting filter options:', err);
             throw err;
         }
-    }
-
-    /**
-     * Get current result data (cached after last getData call)
-     * DEPRECATED: Use getRowCount(), getColumnNames(), and getCell() instead
-     */
-    getCurrentData(): TableData {
-        // For backward compatibility, materialize a subset of rows
-        // But this defeats the purpose of columnar storage!
-        console.warn('[DataService] getCurrentData() is deprecated. Use columnar access methods.');
-
-        const columns = this.resultSchema.map((c) => c.name);
-        const rows: Row[] = [];
-
-        // Only materialize first 1000 rows to avoid memory issues
-        const maxRows = Math.min(this.rowCount, 1000);
-
-        for (let i = 0; i < maxRows; i++) {
-            const row: Row = {};
-            for (const col of columns) {
-                row[col] = this.getCell(i, col);
-            }
-            rows.push(row);
-        }
-
-        return { rows, columns };
     }
 
     /**

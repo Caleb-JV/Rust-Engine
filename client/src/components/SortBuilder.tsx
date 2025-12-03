@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Plus, X, ArrowUpDown } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { GripVertical, X, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -8,10 +8,10 @@ import type { SortSpec } from '../services/dataService';
 import { useStore } from '../store/fieldsStore';
 
 interface SortBuilderProps {
-    onSort?: (sorts: SortSpec[]) => void;
+    onSortChange?: (sorts: SortSpec[]) => void;
 }
 
-export function SortBuilder({ onSort }: SortBuilderProps) {
+export function SortBuilder({ onSortChange }: SortBuilderProps) {
     const pivotBuckets = useStore((state) => state.pivotBuckets);
     const [sorts, setSorts] = useState<SortSpec[]>([]);
 
@@ -26,130 +26,126 @@ export function SortBuilder({ onSort }: SortBuilderProps) {
         );
     }, [pivotBuckets]);
 
-    const [currentSort, setCurrentSort] = useState<{
-        column: string;
-        direction: 'asc' | 'desc';
-    }>({
-        column: '',
-        direction: 'asc',
-    });
+    // Auto-apply sorts whenever they change
+    useEffect(() => {
+        onSortChange?.(sorts);
+    }, [sorts, onSortChange]);
 
-    const addSort = () => {
-        if (!currentSort.column) return;
+    const addSort = (column: string) => {
+        if (!column) return;
 
-        setSorts([
-            ...sorts,
-            {
-                column: currentSort.column,
-                direction: currentSort.direction,
-            },
-        ]);
+        // Check if column already exists
+        const existingIndex = sorts.findIndex((s) => s.column === column);
+        if (existingIndex >= 0) return;
 
-        setCurrentSort({ column: '', direction: 'asc' });
+        setSorts([...sorts, { column, direction: 'asc' }]);
+    };
 
-        // Notify parent
-        onSort?.([
-            ...sorts,
-            {
-                column: currentSort.column,
-                direction: currentSort.direction,
-            },
-        ]);
+    const toggleDirection = (index: number) => {
+        const newSorts = [...sorts];
+        newSorts[index].direction = newSorts[index].direction === 'asc' ? 'desc' : 'asc';
+        setSorts(newSorts);
     };
 
     const removeSort = (index: number) => {
-        const newSorts = sorts.filter((_, i) => i !== index);
-        setSorts(newSorts);
-        onSort?.(newSorts);
+        setSorts(sorts.filter((_, i) => i !== index));
     };
 
     const clearAllSorts = () => {
         setSorts([]);
-        onSort?.([]);
     };
+
+    // Get columns not yet used in sorts
+    const unusedColumns = availableColumns.filter((col) => !sorts.some((s) => s.column === col.name));
 
     return (
         <div className="space-y-4">
-            {/* Add Sort Section */}
-            <div className="space-y-3">
-                <Label className="text-xs font-semibold">Add Sort</Label>
-
-                {/* Column Selection */}
-                <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Column</Label>
-                    <Select
-                        value={currentSort.column}
-                        onChange={(e) => setCurrentSort({ ...currentSort, column: e.target.value })}
-                        className="w-full"
-                        disabled={availableColumns.length === 0}
-                    >
-                        <option value="">Select column</option>
-                        {availableColumns.map((col) => (
-                            <option key={col.name} value={col.name}>
-                                {col.name} ({col.type})
-                            </option>
-                        ))}
-                    </Select>
-                </div>
-
-                {/* Direction Selection */}
-                {currentSort.column && (
-                    <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Direction</Label>
-                        <div className="flex gap-2">
-                            <Select
-                                value={currentSort.direction}
-                                onChange={(e) => setCurrentSort({ ...currentSort, direction: e.target.value as 'asc' | 'desc' })}
-                                className="flex-1"
-                            >
-                                <option value="asc">Ascending (A → Z, 0 → 9)</option>
-                                <option value="desc">Descending (Z → A, 9 → 0)</option>
-                            </Select>
-                            <Button onClick={addSort} size="sm" variant="default">
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
+            {/* Quick Add Sort */}
+            <div className="space-y-2">
+                <Label className="text-xs font-semibold">Sort By</Label>
+                <Select value="" onChange={(e) => addSort(e.target.value)} className="w-full" disabled={unusedColumns.length === 0}>
+                    <option value="">+ Add column to sort...</option>
+                    {unusedColumns.map((col) => (
+                        <option key={col.name} value={col.name}>
+                            {col.name} ({col.type})
+                        </option>
+                    ))}
+                </Select>
             </div>
 
-            {/* Active Sorts List */}
+            {/* Active Sorts - Editable inline */}
             {sorts.length > 0 && (
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <Label className="text-xs font-semibold">Sort Order ({sorts.length})</Label>
-                        <Button onClick={clearAllSorts} size="sm" variant="ghost" className="h-6 text-xs">
-                            Clear All
-                        </Button>
+                        <Label className="text-xs text-muted-foreground">Sort Priority ({sorts.length})</Label>
+                        {sorts.length > 1 && (
+                            <Button onClick={clearAllSorts} size="sm" variant="ghost" className="h-6 text-xs text-destructive hover:text-destructive">
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Clear
+                            </Button>
+                        )}
                     </div>
                     <div className="space-y-1.5">
                         {sorts.map((sort, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md group hover:bg-muted transition-colors">
-                                <span className="text-xs font-semibold text-muted-foreground shrink-0">{index + 1}.</span>
-                                <Badge variant="outline" className="text-xs font-mono shrink-0">
-                                    {sort.column}
-                                </Badge>
-                                <div className="flex items-center gap-1 flex-1">
-                                    <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">{sort.direction === 'asc' ? 'Ascending' : 'Descending'}</span>
+                            <div
+                                key={index}
+                                className="flex items-center gap-2 p-2.5 bg-muted/30 rounded-lg border border-border/50 hover:bg-muted/50 transition-all group"
+                            >
+                                <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <Badge variant="secondary" className="text-xs font-medium shrink-0 bg-background">
+                                        {index + 1}
+                                    </Badge>
+                                    <span className="text-sm font-medium truncate">{sort.column}</span>
                                 </div>
+
+                                <Button
+                                    onClick={() => toggleDirection(index)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 shrink-0"
+                                    title={`Toggle to ${sort.direction === 'asc' ? 'descending' : 'ascending'}`}
+                                >
+                                    {sort.direction === 'asc' ? (
+                                        <>
+                                            <ArrowUp className="h-3.5 w-3.5 mr-1" />
+                                            <span className="text-xs">Asc</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ArrowDown className="h-3.5 w-3.5 mr-1" />
+                                            <span className="text-xs">Desc</span>
+                                        </>
+                                    )}
+                                </Button>
+
                                 <Button
                                     onClick={() => removeSort(index)}
                                     size="sm"
                                     variant="ghost"
-                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                                    title="Remove sort"
                                 >
-                                    <X className="h-3 w-3" />
+                                    <X className="h-4 w-4" />
                                 </Button>
                             </div>
                         ))}
                     </div>
+                    <p className="text-xs text-muted-foreground px-1">💡 Sorts are applied in order. Click direction to toggle.</p>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {sorts.length === 0 && availableColumns.length > 0 && (
+                <div className="text-xs text-muted-foreground bg-muted/30 px-3 py-3 rounded-md border border-dashed border-border">
+                    Select a column above to sort your data instantly.
                 </div>
             )}
 
             {/* Help Text */}
             {availableColumns.length === 0 && (
-                <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-md">
+                <div className="text-xs text-muted-foreground bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 rounded-md">
                     👆 Add columns in the Pivot tab to enable sorting
                 </div>
             )}

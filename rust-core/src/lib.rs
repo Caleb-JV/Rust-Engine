@@ -193,9 +193,6 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
 	let query: DataQuery = serde_json::from_str(query_json)
 			.map_err(|e| js_err(&format!("Invalid query JSON: {}", e)))?;
 
-    // Note: Fast path cache removed since we're returning column buffers
-    // Caching would need to cache the JS objects, which is not efficient
-
     // Load stored data (single lock acquisition per store)
     let schema = STORED_SCHEMA
         .lock()
@@ -446,6 +443,6 @@ pub(crate) fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 	operations::get_filter_options(col_name)
 }
 
-pub(crate) fn get_processed_data(data: &str,pivot:&str,aggregationMap:&str) -> Result<JsValue, JsValue> {
-	operations::get_processed_data(data,pivot,aggregationMap)
+pub(crate) fn get_processed_data(data: &str,pivot:&str,aggregation_map:&str) -> Result<JsValue, JsValue> {
+	operations::get_processed_data(data,pivot,aggregation_map)
 }

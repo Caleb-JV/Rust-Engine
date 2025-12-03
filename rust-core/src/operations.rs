@@ -12,11 +12,13 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct AggregationConfig {
     pub fields: HashMap<String, String>,
 }
 
 /// Perform aggregation operations on a column
+#[allow(dead_code)]
 pub fn aggregate(col_names: &str, aggregation_type: &str) -> Result<JsValue, JsValue> {
     let agg_type = match aggregation_type.to_lowercase().as_str() {
         "sum" => AggregationType::Sum,
@@ -361,7 +363,7 @@ pub fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 }
 
 
-
+#[allow(dead_code)]
 fn get_field_as_string<'a>(row: &'a Value, field: &str) -> Option<&'a str> {
     row.get(field).and_then(Value::as_str)
 }

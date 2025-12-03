@@ -3,7 +3,8 @@ import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SortBuilder } from './SortBuilder';
-import { dataService, type SortSpec } from '../services/dataService';
+import { dataService, type FilterCondition, type SortSpec } from '../services/dataService';
+import { useStore } from '@/store/fieldsStore';
 
 interface FilterBuilderProps {
     onApply?: () => void;
@@ -14,13 +15,15 @@ export function SortPane({ onApply }: FilterBuilderProps) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [sortOpen, setSortOpen] = useState(false);
+    const filterOptions = useStore.getState().filterCondition;
 
     const applySorts = async () => {
         setLoading(true);
         setError(null);
         try {
-            const query: { sort?: SortSpec[] } = {};
+            const query: { sort?: SortSpec[]; filters?: FilterCondition[] } = {};
             if (sorts.length > 0) query.sort = sorts;
+            if (filterOptions.length > 0) query.filters = filterOptions;
 
             dataService.getData(query);
             onApply?.();
@@ -43,7 +46,7 @@ export function SortPane({ onApply }: FilterBuilderProps) {
                 </CollapsibleTrigger>
 
                 <CollapsibleContent className="pt-3">
-                    <SortBuilder onSort={setSorts} />
+                    <SortBuilder onSortChange={setSorts} />
                 </CollapsibleContent>
             </Collapsible>
 
