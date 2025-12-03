@@ -140,38 +140,48 @@ pub(crate) fn seed(bytes: &[u8]) -> Result<(), JsValue> {
 }
 
 pub(crate) fn get_meta_data() -> Result<JsValue, JsValue> {
-    // Lock once and clone only the Arc (cheap)
+    // --- SCHEMA ---
     let schema = STORED_SCHEMA
         .lock()
         .unwrap()
         .as_ref()
-        .ok_or_else(|| js_err("No schema stored. Call seed() first."))?  
+        .ok_or_else(|| js_err("No schema stored. Call seed() first."))?
         .clone();
 
-    // Pre-allocate with exact capacity
-    let field_count = schema.fields().len();
-    let mut cols = Vec::with_capacity(field_count);
+    // --- ROW COUNT ---
+    let batches_opt = STORED_BATCHES
+        .lock()
+        .unwrap();
 
-    // Iterate efficiently
-    for field in schema.fields() {
+    let batches = batches_opt
+        .as_ref()
+        .ok_or_else(|| js_err("No batches stored. Call seed() first."))?;
+
+    let total_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
+
+    // --- COLUMN META ---
+    let fields = schema.fields();
+    let mut cols = Vec::with_capacity(fields.len());
+
+    for field in fields {
         let simple_type = to_simple_type(field.data_type());
-
         cols.push(serde_json::json!({
             "name": field.name(),
             "type": simple_type,
-            "nullable": field.is_nullable()
+            "nullable": field.is_nullable(),
         }));
     }
 
+    // --- FINAL JSON ---
     let meta = serde_json::json!({
         "columns": cols,
-        "column_count": field_count,
+        "column_count": fields.len(),
+        "row_count": total_rows,
     });
 
-    // Serialize directly to string
     let json_string = serde_json::to_string(&meta)
         .map_err(|e| js_err(&format!("Serialization error: {}", e)))?;
-    
+
     Ok(JsValue::from_str(&json_string))
 }
 
