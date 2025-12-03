@@ -28,13 +28,7 @@ export default function DataProvider(props: IDataProvider) {
     // Pivot update handler - triggers getData
     const onPivotUpdate = (state: { buckets: typeof pivotBuckets }) => {
         setPivotBuckets(state.buckets);
-
-        // Get column names from columns bucket
-        const bucketItems = state.buckets.filter((b) => b.id === 'columns' || b.id === 'values').flatMap((b) => b.items);
-        const columnNames = bucketItems?.map((item) => item.value?.name).filter(Boolean) as string[];
-
-        // Fetch data with selected columns
-        if (columnNames.length > 0) dataService.getData({ columns: columnNames });
+        dataService.getData();
     };
 
     return (

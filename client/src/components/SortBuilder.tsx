@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import type { SortSpec } from '../services/dataService';
 import { useStore } from '../store/fieldsStore';
+import { getCurrentPivotItems } from '@/lib/data.utils';
 
 interface SortBuilderProps {
     onSortChange?: (sorts: SortSpec[]) => void;
@@ -17,9 +18,9 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
 
     // Get available columns from the columns bucket
     const availableColumns = useMemo(() => {
-        const columnsBucket = pivotBuckets.find((b) => b.id === 'columns');
+        const columnsBucket = getCurrentPivotItems(pivotBuckets);
         return (
-            columnsBucket?.items.map((item) => ({
+            columnsBucket?.map((item) => ({
                 name: item.value?.name || '',
                 type: item.value?.dataType || 'string',
             })) || []
@@ -63,8 +64,13 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
             {/* Quick Add Sort */}
             <div className="space-y-2">
                 <Label className="text-xs font-semibold">Sort By</Label>
-                <Select value="" onChange={(e) => addSort(e.target.value)} className="w-full" disabled={unusedColumns.length === 0}>
-                    <option value="">+ Add column to sort...</option>
+                <Select
+                    value=""
+                    onChange={(e) => addSort(e.target.value)}
+                    className="w-full text-xs mt-1.5 cursor-pointer"
+                    disabled={unusedColumns.length === 0}
+                >
+                    <option value=""> + Add Sort</option>
                     {unusedColumns.map((col) => (
                         <option key={col.name} value={col.name}>
                             {col.name} ({col.type})

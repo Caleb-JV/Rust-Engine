@@ -19,6 +19,7 @@ import type { IFieldsKeeperItem } from 'react-fields-keeper';
 import type { IColumnField, TimingLog } from '../store/fieldsStore';
 import { useStore } from '../store/fieldsStore';
 import { getWorkerClient } from '../worker/WorkerClient';
+import { getPivotItemsToFetchData } from '@/lib/data.utils';
 
 export type TAggregationType = 'sum' | 'average' | 'count' | 'min' | 'max';
 
@@ -45,22 +46,20 @@ export interface SortSpec {
     direction: 'asc' | 'desc';
 }
 
-export interface PivotValue {
+export interface IColumnInfo {
     column: string;
-    aggregation: TAggregationType;
+    aggregation?: TAggregationType;
 }
 
-export interface PivotSpec {
-    rows: string[];
-    columns?: string[];
-    values: PivotValue[];
+export interface IPivotOptions {
+    rows: IColumnInfo[];
+    values: IColumnInfo[];
 }
 
 export interface DataQuery {
-    columns?: string[];
-    filters?: FilterCondition[];
+    pivot: IPivotOptions;
+    filters: FilterCondition[];
     sort?: SortSpec[];
-    pivot?: PivotSpec;
     limit?: number;
     offset?: number;
 }
@@ -360,7 +359,15 @@ class DataService {
      * Runs in Web Worker to prevent UI freezes
      * NEW: Uses columnar buffers instead of IPC for zero-copy performance
      */
-    getData(query: DataQuery): void {
+    getData(): void {
+        const { filterCondition, pivotBuckets } = useStore.getState();
+
+        const query: DataQuery = {
+            filters: filterCondition,
+            pivot: getPivotItemsToFetchData(pivotBuckets),
+            sort: [],
+        };
+
         const store = useStore.getState();
 
         store.setProcessingStatus('processing');
@@ -558,7 +565,7 @@ class DataService {
         store.setFilterBuckets([{ id: 'filters', items: [] }]);
 
         // Fetch all data
-        this.getData({});
+        this.getData();
     }
 
     /**

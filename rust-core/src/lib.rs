@@ -207,32 +207,7 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
     let stored_batches = batches_ref
         .as_ref()
         .ok_or_else(|| js_err("No batches stored."))?;
-    
-    // Fast path: Only limit/offset (no filters, sorting, pivot, or column projection)
-    let only_limit_offset = query.filters.is_none() 
-        && query.sort.is_none() 
-        && query.pivot.is_none()
-        && query.columns.is_none()
-        && (query.limit.is_some() || query.offset.is_some());
-    
-    if only_limit_offset {
-        let offset = query.offset.unwrap_or(0);
-        let limit = query.limit;
-        let result = apply_limit_offset_borrow(stored_batches, offset, limit)?;
-        drop(batches_ref);
-        
-        // Combine and extract buffers
-        let combined_batch = combine_batches(&schema, &result)?;
-        let columns = extract_column_buffers(&combined_batch)?;
-        let row_count = combined_batch.num_rows();
-        
-        let response = js_sys::Object::new();
-        js_sys::Reflect::set(&response, &"columns".into(), &columns)?;
-        js_sys::Reflect::set(&response, &"rowCount".into(), &JsValue::from_f64(row_count as f64))?;
-        
-        return Ok(response.into());
-    }
-    
+
     let mut batches = stored_batches.clone();
     drop(batches_ref);
 
