@@ -97,7 +97,7 @@ export const FilterComponent = () => {
                             <AccordionContent className="px-3 py-2 text-xs">
                                 {/* TABS: BASIC / ADVANCED */}
                                 <Tabs defaultValue="basic" className="w-full">
-                                    <TabsList className="grid grid-cols-2 w-[160px] h-7">
+                                    <TabsList className="grid grid-cols-2 w-40 h-7">
                                         <TabsTrigger value="basic" className="text-xs px-2 py-1">
                                             Basic
                                         </TabsTrigger>

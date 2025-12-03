@@ -331,7 +331,11 @@ class DataService {
 
             console.log('Metadata received:', this.metadata);
 
-            // 4. Convert metadata to FieldsKeeper items
+            // 4. Set row and column counts in store
+            store.setTableRowCount(this.metadata.row_count);
+            store.setTableColumnCount(this.metadata.columns.length);
+
+            // 5. Convert metadata to FieldsKeeper items
             const allItems = this.createFieldItems();
 
             store.setProcessingStatus('success');
@@ -409,9 +413,13 @@ class DataService {
                 console.log(`  └─ Total (main thread): ${totalMainThreadTime.toFixed(2)}ms`);
                 console.log(`[DataService] Rows: ${this.rowCount.toLocaleString()}, Columns: ${this.resultSchema.length}`);
 
+                // Update row and column counts
+                store.setTableRowCount(this.rowCount);
+                store.setTableColumnCount(this.resultSchema.length);
+
                 const timing: TimingLog = {
                     operation: 'Processing Query',
-                    duration_ms: totalMainThreadTime,
+                    duration_ms: response.timeTaken,
                 };
                 store.setLatestTiming(timing);
                 store.setProcessingStatus('success');

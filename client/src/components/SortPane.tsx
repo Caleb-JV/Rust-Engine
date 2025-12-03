@@ -46,7 +46,7 @@ export function SortPane({ onApply }: FilterBuilderProps) {
                 </CollapsibleTrigger>
 
                 <CollapsibleContent className="pt-3">
-                    <SortBuilder onSort={setSorts} />
+                    <SortBuilder onSortChange={setSorts} />
                 </CollapsibleContent>
             </Collapsible>
 
