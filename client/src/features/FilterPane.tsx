@@ -20,7 +20,7 @@ export const FilterPane = () => {
             <PanelHeader title="Filters & Sorts" onCollapse={() => setIsCollapsed(true)} />
             <div className="flex border-b">
                 <button
-                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
                         activeTab === 'filters' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
                     }`}
                     onClick={() => setActiveTab('filters')}
@@ -28,7 +28,7 @@ export const FilterPane = () => {
                     Filters
                 </button>
                 <button
-                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
                         activeTab === 'sorts' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
                     }`}
                     onClick={() => setActiveTab('sorts')}

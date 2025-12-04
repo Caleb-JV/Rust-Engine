@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { GripVertical, X, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import type { SortSpec } from '../services/dataService';
 import { useStore } from '../store/fieldsStore';
@@ -66,16 +66,21 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
                 <Label className="text-xs font-semibold">Sort By</Label>
                 <Select
                     value=""
-                    onChange={(e) => addSort(e.target.value)}
-                    className="w-full text-xs mt-1.5 cursor-pointer"
                     disabled={unusedColumns.length === 0}
+                    onValueChange={(value) => {
+                        addSort(value);
+                    }}
                 >
-                    <option value=""> + Add Sort</option>
-                    {unusedColumns.map((col) => (
-                        <option key={col.name} value={col.name}>
-                            {col.name} ({col.type})
-                        </option>
-                    ))}
+                    <SelectTrigger className="w-full text-xs mt-1.5 cursor-pointer">
+                        <SelectValue placeholder="+ Add Sort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {unusedColumns.map((col) => (
+                            <SelectItem key={col.name} value={col.name}>
+                                {col.name} ({col.type})
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
                 </Select>
             </div>
 

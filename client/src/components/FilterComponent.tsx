@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { dataService } from '@/services/dataService';
 import { getCurrentPivotItems } from '@/lib/data.utils';
 import { DraftingCompassIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 export interface FilterOptionResponse {
     column: string;
@@ -104,10 +105,10 @@ export const FilterComponent = () => {
                             {/* TABS: BASIC / ADVANCED */}
                             <Tabs defaultValue="basic" className="w-full">
                                 <TabsList className="grid grid-cols-2 w-40 h-7">
-                                    <TabsTrigger value="basic" className="text-xs px-2 py-1">
+                                    <TabsTrigger value="basic" className="text-xs px-2 py-1 cursor-pointer">
                                         Basic
                                     </TabsTrigger>
-                                    <TabsTrigger value="advanced" className="text-xs px-2 py-1">
+                                    <TabsTrigger value="advanced" className="text-xs px-2 py-1 cursor-pointer">
                                         Advanced
                                     </TabsTrigger>
                                 </TabsList>
@@ -144,31 +145,42 @@ export const FilterComponent = () => {
                                             const fc = filterConditions.find((f) => f.column === col.id);
 
                                             return (
-                                                <div className="flex flex-row gap-2 items-center">
+                                                <div className="flex flex-row gap-2 items-center  flex-wrap">
                                                     {/* OPERATOR DROPDOWN */}
-                                                    <select
-                                                        className="border px-2 py-1 rounded w-30 text-xs flex-1"
-                                                        value={fc?.operator ?? 'equals'}
-                                                        onChange={(e) => {
+                                                    <Select
+                                                        value={fc?.operator}
+                                                        onValueChange={(value) => {
                                                             addOrUpdateFilterCondition({
                                                                 column: col.id,
-                                                                operator: e.target.value as FilterCondition['operator'],
+                                                                operator: value as FilterCondition['operator'],
                                                                 value: fc?.value ?? '',
                                                             });
                                                         }}
                                                     >
-                                                        <option value="equals">Equals</option>
-                                                        <option value="notequals">Not Equals</option>
-                                                        <option value="contains">Contains</option>
-                                                        <option value="notcontains">Not Contains</option>
-                                                        <option value="greaterthan">Greater Than</option>
-                                                        <option value="lessthan">Less Than</option>
-                                                        <option value="greaterthanorequal">Greater Than Or Equal</option>
-                                                        <option value="lessthanorequal">Less Than Or Equal</option>
-                                                        <option value="in">In (comma separated)</option>
-                                                        <option value="notin">Not In (comma separated)</option>
-                                                        <option value="between">Between (e.g. 10,20)</option>
-                                                    </select>
+                                                        <SelectTrigger style={{ height: '26px' }} className="px-2 text-[11px] flex-1 rounded-sm">
+                                                            <SelectValue placeholder="Select condition" />
+                                                        </SelectTrigger>
+
+                                                        <SelectContent>
+                                                            {col.value?.dataType === 'string' && (
+                                                                <>
+                                                                    <SelectItem value="contains">Contains</SelectItem>
+                                                                    <SelectItem value="notcontains">Not Contains</SelectItem>
+                                                                </>
+                                                            )}
+                                                            {col.value?.dataType === 'number' && (
+                                                                <>
+                                                                    <SelectItem value="equals">Equals</SelectItem>
+                                                                    <SelectItem value="notequals">Not Equals</SelectItem>
+
+                                                                    <SelectItem value="greaterthan">Greater Than</SelectItem>
+                                                                    <SelectItem value="lessthan">Less Than</SelectItem>
+                                                                    <SelectItem value="greaterthanorequal">Greater Than Or Equal</SelectItem>
+                                                                    <SelectItem value="lessthanorequal">Less Than Or Equal</SelectItem>
+                                                                </>
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
 
                                                     {/* BETWEEN */}
                                                     {fc && fc.operator === 'between' && (
