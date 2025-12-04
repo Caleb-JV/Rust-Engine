@@ -131,8 +131,9 @@ const handleGetMetaData = async (): Promise<IResponse<string>> => {
     return (await get_meta_data_async()) as IResponse<string>;
 };
 
-const handleGetData = async (queryJson: string): Promise<IResponse<Uint8Array>> => {
-    return (await get_data_async(queryJson)) as IResponse<Uint8Array>;
+const handleGetData = async (queryJson: string): Promise<IResponse<any>> => {
+    // Returns { columns: ArrowColumnBuffer[], rowCount: number }
+    return (await get_data_async(queryJson)) as IResponse<any>;
 };
 
 const handleGetFilterOptions = async (column: string): Promise<IResponse<string>> => {
@@ -183,7 +184,7 @@ const handleMessage = async (message: WorkerMessage<WorkerRequest>): Promise<Wor
                 const response = await handleProcessData(payload.payload.data, payload.payload.pivot, payload.payload.aggregationMap);
                 return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
             }
-            
+
             // NEW: processFile with streaming + progress
             case REQUEST_TYPE.PROCESS_FILE: {
                 const file = payload.payload.file as File;

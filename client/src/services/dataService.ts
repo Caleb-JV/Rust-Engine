@@ -10,6 +10,7 @@ import {
     Float64,
     Bool,
     Utf8,
+    DateDay,
     DateMillisecond,
     TimestampMillisecond,
 } from 'apache-arrow';
@@ -66,7 +67,7 @@ export interface DataQuery {
 
 interface ArrowColumnBuffer {
     name: string;
-    dataType: 'Int8' | 'Int16' | 'Int32' | 'Int64' | 'Float32' | 'Float64' | 'Boolean' | 'Utf8' | 'Date' | 'Timestamp';
+    dataType: 'Int8' | 'Int16' | 'Int32' | 'Int64' | 'Float32' | 'Float64' | 'Boolean' | 'Utf8' | 'Date32' | 'Date64' | 'Timestamp';
     length: number;
     nullCount: number;
     nullBitmap?: ArrayBuffer;
@@ -178,14 +179,27 @@ function reconstructArrowColumn(buffer: ArrowColumnBuffer): Vector {
                 }),
             );
 
-        case 'Date':
+        case 'Date32':
+            // Date32 stores days since Unix epoch (Int32)
+            return makeVector(
+                makeData({
+                    type: new DateDay(),
+                    length,
+                    nullCount,
+                    nullBitmap: nullBitmapArray,
+                    data: new Int32Array(values),
+                }),
+            );
+
+        case 'Date64':
+            // Date64 stores milliseconds since Unix epoch
             return makeVector(
                 makeData({
                     type: new DateMillisecond(),
                     length,
                     nullCount,
                     nullBitmap: nullBitmapArray,
-                    data: new Int32Array(values),
+                    data: new BigInt64Array(values),
                 }),
             );
 
@@ -380,10 +394,24 @@ class DataService {
 
         dataResponse
             .then(async (response) => {
-                if (!response.success) throw new Error(response.message || 'Failed to get data');
+                console.log('[DataService] getData response:', {
+                    success: response.success,
+                    message: response.message,
+                    hasData: !!response.data,
+                    dataType: response.data ? typeof response.data : 'undefined',
+                });
+                if (!response.success) {
+                    console.error('[DataService] getData failed:', response.message);
+                    throw new Error(response.message || 'Failed to get data');
+                }
 
                 // NEW: response.data is { columns: ArrowColumnBuffer[], rowCount: number }
                 const bufferResponse = response.data as unknown as ColumnBufferResponse;
+                console.log('[DataService] Buffer response:', {
+                    hasColumns: !!bufferResponse.columns,
+                    columnCount: bufferResponse.columns?.length,
+                    rowCount: bufferResponse.rowCount,
+                });
 
                 const reconstructStart = performance.now();
 
@@ -393,12 +421,19 @@ class DataService {
                 this.rowCount = bufferResponse.rowCount;
 
                 for (const colBuffer of bufferResponse.columns) {
-                    const vector = reconstructArrowColumn(colBuffer);
-                    this.resultColumns.set(colBuffer.name, vector);
-                    this.resultSchema.push({
-                        name: colBuffer.name,
-                        type: colBuffer.dataType,
-                    });
+                    try {
+                        const vector = reconstructArrowColumn(colBuffer);
+                        this.resultColumns.set(colBuffer.name, vector);
+                        this.resultSchema.push({
+                            name: colBuffer.name,
+                            type: colBuffer.dataType,
+                        });
+                    } catch (colError) {
+                        console.error(`[DataService] Failed to reconstruct column '${colBuffer.name}' (type: ${colBuffer.dataType}):`, colError);
+                        throw new Error(
+                            `Failed to reconstruct column '${colBuffer.name}': ${colError instanceof Error ? colError.message : String(colError)}`,
+                        );
+                    }
                 }
                 const stringifiedRows = JSON.stringify(this.resultSchema, (_, value) =>
                     typeof value === 'bigint'
