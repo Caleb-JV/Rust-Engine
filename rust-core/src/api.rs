@@ -64,7 +64,12 @@ pub fn get_data_async(query_json: String) -> js_sys::Promise {
                 // data_obj is already a JS object with { columns, rowCount }
                 Ok(build_response(data_obj, true, "", duration))
             }
-            Err(_) => Ok(build_response(JsValue::NULL, false, "get_data failed", duration)),
+            Err(e) => {
+                // Extract error message from JsValue
+                let error_msg = js_sys::Error::from(e).message();
+                let error_str = error_msg.as_string().unwrap_or_else(|| "get_data failed".to_string());
+                Ok(build_response(JsValue::NULL, false, &error_str, duration))
+            }
         }
     })
 }

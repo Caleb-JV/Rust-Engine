@@ -1,26 +1,26 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Async version of get_filter_options with a structured response envelope
+ * Async WASM export: seed data and return a structured response with timing
  */
-export function get_filter_options_async(col_name: string): Promise<any>;
+export function seed_async(bytes: Uint8Array): Promise<any>;
 /**
  * Async version of get_data with a structured response envelope
  * Returns { columns: [...], rowCount: number } instead of IPC bytes
  */
 export function get_data_async(query_json: string): Promise<any>;
 /**
- * Async WASM export: seed data and return a structured response with timing
+ * Async WASM export: get meta data with a structured response
  */
-export function seed_async(bytes: Uint8Array): Promise<any>;
+export function get_meta_data_async(): Promise<any>;
+/**
+ * Async version of get_filter_options with a structured response envelope
+ */
+export function get_filter_options_async(col_name: string): Promise<any>;
 /**
  * Async version of get_processed_data with a structured response envelope
  */
 export function get_processed_data_async(data: string, pivot: string, aggregation_map: string): Promise<any>;
-/**
- * Async WASM export: get meta data with a structured response
- */
-export function get_meta_data_async(): Promise<any>;
 /**
  * Get all timing log entries
  */
@@ -31,16 +31,16 @@ export function get_timing_log(): any;
 export function clear_timing_log(): void;
 /**
  * ------------------------------------------------------------------
- *   STREAMING API: Initialize with CSV header to infer schema
- * ------------------------------------------------------------------
- */
-export function seed_start(header_bytes: Uint8Array): void;
-/**
- * ------------------------------------------------------------------
  *   STREAMING API: Finalize streaming (returns total row count)
  * ------------------------------------------------------------------
  */
 export function seed_finalize(): number;
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Initialize with CSV header to infer schema
+ * ------------------------------------------------------------------
+ */
+export function seed_start(header_bytes: Uint8Array): void;
 /**
  * ------------------------------------------------------------------
  *   STREAMING API: Process and append a chunk of CSV data
@@ -52,19 +52,19 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly clear_timing_log: () => void;
   readonly get_data_async: (a: number, b: number) => any;
   readonly get_filter_options_async: (a: number, b: number) => any;
   readonly get_meta_data_async: () => any;
   readonly get_processed_data_async: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
-  readonly get_timing_log: () => any;
   readonly seed_async: (a: number, b: number) => any;
+  readonly clear_timing_log: () => void;
+  readonly get_timing_log: () => any;
   readonly seed_chunk: (a: number, b: number, c: number) => [number, number];
   readonly seed_finalize: () => [number, number, number];
   readonly seed_start: (a: number, b: number) => [number, number];
-  readonly wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__closure__destroy__hefaf3f048dda7301: (a: number, b: number) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba: (a: number, b: number, c: any, d: any) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__h56051a08f764ac79: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;

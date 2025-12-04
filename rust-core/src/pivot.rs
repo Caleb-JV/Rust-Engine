@@ -1,5 +1,6 @@
 use arrow_array::{Array, Float64Array, Int64Array, RecordBatch, StringArray};
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
+use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 use std::sync::Arc;
 use wasm_bindgen::JsValue;
@@ -82,14 +83,16 @@ fn group_and_aggregate(
     }
 
     // Build result schema
+    // Note: Row columns are converted to strings for grouping, so use Utf8 type
     let mut result_fields = Vec::new();
     let batch_schema = batch.schema();
     for row_spec in &pivot_spec.rows {
         let col_name = &row_spec.column;
-        let field = batch_schema
+        let _field = batch_schema
             .field_with_name(col_name)
             .map_err(|_| js_err(&format!("Field not found: {}", col_name)))?;
-        result_fields.push(field.clone());
+        // Use Utf8 because we convert all grouping values to strings
+        result_fields.push(Field::new(col_name, DataType::Utf8, true));
     }
 
     for pv in &pivot_spec.values {
@@ -312,6 +315,32 @@ fn get_string_value(array: &dyn Array, idx: usize) -> Result<String, JsValue> {
                 .ok_or_else(|| js_err("Failed to downcast to Float64Array"))?;
             Ok(arr.value(idx).to_string())
         }
+         DataType::Date32 => {
+            let arr = array
+                .as_any()
+                .downcast_ref::<arrow_array::Date32Array>()
+                .ok_or_else(|| js_err("Failed to downcast to Date32Array"))?;
+
+            let days = arr.value(idx);
+            let date = NaiveDate::from_yo_opt(1970, 1)
+                .unwrap()
+                + chrono::Duration::days(days as i64);
+
+            Ok(date.format("%Y-%m-%d").to_string())
+        }
+        DataType::Date64 => {
+            let arr = array
+                .as_any()
+                .downcast_ref::<arrow_array::Date64Array>()
+                .ok_or_else(|| js_err("Failed to downcast to Date64Array"))?;
+
+            let ts_ms = arr.value(idx);
+            let dt = NaiveDateTime::from_timestamp_millis(ts_ms)
+                .ok_or_else(|| js_err("Invalid Date64 timestamp"))?;
+
+            Ok(dt.date().format("%Y-%m-%d").to_string())
+        }
+        
         dt => Err(js_err(&format!("Unsupported type for grouping: {:?}", dt))),
     }
 }

@@ -203,8 +203,17 @@ fn extract_single_column(name: &str, array: &Arc<dyn Array>) -> Result<JsValue, 
             Reflect::set(&obj, &"values".into(), &value_array.buffer())?;
         }
         
-        DataType::Date32 | DataType::Date64 => {
-            Reflect::set(&obj, &"dataType".into(), &JsValue::from_str("Date"))?;
+        DataType::Date32 => {
+            Reflect::set(&obj, &"dataType".into(), &JsValue::from_str("Date32"))?;
+            let buffer = &array_data.buffers()[0];
+            let bytes = buffer.as_slice();
+            let arr = Uint8Array::from(bytes);
+            Reflect::set(&obj, &"values".into(), &arr.buffer())?;
+            Reflect::set(&obj, &"offsets".into(), &JsValue::NULL)?;
+        }
+        
+        DataType::Date64 => {
+            Reflect::set(&obj, &"dataType".into(), &JsValue::from_str("Date64"))?;
             let buffer = &array_data.buffers()[0];
             let bytes = buffer.as_slice();
             let arr = Uint8Array::from(bytes);
