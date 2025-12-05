@@ -40,9 +40,9 @@ export const PanelHeader = (props: IPanelHeaderProps) => {
 
     // paint
     return (
-        <div className={`flex items-center justify-between px-3 py-2 border-b ${className ?? ''}`}>
-            <div className="flex items-center gap-2">
-                <h3 className="font-semibold">{title}</h3>
+        <div className={`flex items-center justify-between px-3 py-1.5 border-b w-full ${className ?? ''}`}>
+            <div className="flex items-center w-full gap-2 justify-between">
+                <h4 className="text-[15px] font-semibold">{title}</h4>
                 {children}
             </div>
             <Button variant="ghost" size="icon" onClick={onCollapse}>

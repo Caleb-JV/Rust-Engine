@@ -3,6 +3,7 @@ import { dataService } from '../services/dataService';
 import { useStore, selectProcessingStatus } from '../store/fieldsStore';
 import { useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import FileUploader from './Header/FileUploader';
 
 export const TableView = () => {
     const processingStatus = useStore(selectProcessingStatus);
@@ -29,50 +30,33 @@ export const TableView = () => {
     const virtualItems = rowVirtualizer.getVirtualItems();
     console.log(`[TableView] Rendering ${virtualItems.length} rows out of ${tableMetadata.rowCount} total rows`);
 
-    if (processingStatus === 'idle') {
-        return (
-            <div className="flex-1 flex items-center justify-center p-8">
-                <div className="text-center text-muted-foreground">
-                    <p className="text-lg font-semibold mb-2">No Data</p>
-                    <p className="text-sm">Upload a CSV file to view data</p>
-                </div>
-            </div>
-        );
-    }
+    // paint
+    if (processingStatus === 'idle') return <FileUploader />;
 
     return (
-        <div className="flex-1 overflow-auto p-4">
-            <Card className="h-full flex flex-col">
-                <CardHeader className="p-4 border-b flex flex-row items-center justify-between">
-                    <h3 className="text-md font-semibold">Table View</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {tableMetadata.rowCount.toLocaleString()} rows × {tableMetadata.columns.length} columns
-                    </p>
-                </CardHeader>
+        <div className="grid grid-rows-[auto_1fr] overflow-hidden p-4 h-full pt-2">
+            <CardHeader className="px-0 py-3 flex flex-row items-center justify-between">
+                <div className="text-[15px] font-semibold mb-0">Table View</div>
+                <p className="text-xs text-muted-foreground">
+                    {tableMetadata.rowCount.toLocaleString()} rows × {tableMetadata.columns.length} columns
+                </p>
+            </CardHeader>
 
+            <Card className="h-full flex flex-col rounded-sm shadow-none overflow-y-scroll">
                 <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
                     {/* Single scroll container for both vertical & horizontal */}
                     <div ref={parentRef} className="flex-1 overflow-auto">
                         <div className="min-w-full">
                             {/* Sticky header */}
-                            <div
-                                className="flex sticky top-0 z-20 border-b"
-                                ref={headerRowRef}
-                                style={{
-                                    backgroundColor: 'var(--color-muted)',
-                                    position: 'sticky',
-                                    top: 0,
-                                }}
-                            >
+                            <div className="flex sticky top-0 z-20" ref={headerRowRef}>
                                 {tableMetadata.columns.map((col) => (
                                     <div
                                         key={col}
-                                        className="px-4 py-3 text-left font-semibold text-foreground flex-none"
+                                        className="px-4 py-3 text-sm text-left border-b bg-muted font-semibold text-foreground flex-none"
                                         style={{
                                             minWidth: '150px',
                                             maxWidth: '150px',
                                             width: '150px',
-                                            backgroundColor: 'var(--color-muted)',
                                         }}
                                     >
                                         <span className="truncate block">{col}</span>
@@ -90,14 +74,14 @@ export const TableView = () => {
                             >
                                 {virtualItems.map((virtualRow) => {
                                     const index = virtualRow.index;
-                                    const isEven = index % 2 === 0;
+                                    // const isEven = index % 2 === 0;
 
                                     return (
                                         <div
                                             key={virtualRow.key}
                                             ref={rowVirtualizer.measureElement}
                                             data-index={virtualRow.index}
-                                            className="absolute top-0 left-0 right-0 border-b"
+                                            className="absolute top-0 left-0 right-0"
                                             style={{
                                                 transform: `translateY(${virtualRow.start}px)`,
                                                 height: `${virtualRow.size}px`,
@@ -109,11 +93,11 @@ export const TableView = () => {
                                                     return (
                                                         <div
                                                             key={col}
-                                                            className="px-4 py-2 text-sm text-foreground flex-none w-[150px] flex items-center group-hover:bg-accent transition-colors"
+                                                            className="px-4 py-2 text-[13px] text-foreground border-b flex-none w-[150px] flex items-center group-hover:bg-muted/50 transition-colors"
                                                             style={{
                                                                 minWidth: '150px',
                                                                 maxWidth: '150px',
-                                                                backgroundColor: isEven ? 'var(--color-background)' : 'var(--color-muted)',
+                                                                // backgroundColor: isEven ? 'var(--color-background)' : 'var(--color-muted)',
                                                             }}
                                                         >
                                                             <span className="truncate w-full">

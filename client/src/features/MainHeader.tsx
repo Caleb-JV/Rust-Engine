@@ -1,17 +1,26 @@
-import { FileText, Loader2, CheckCircle2, XCircle, ZapIcon, Timer, TrendingUp } from 'lucide-react';
+import { FileText, Loader2, CheckCircle2, XCircle, ZapIcon, Timer, TrendingUp, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
 import { useStore } from '@/store/fieldsStore';
-import { selectProcessingStatus } from '@/store/fieldsStore';
+import { selectProcessingStatus, selectAdditionalOptions, selectUIOptions } from '@/store/fieldsStore';
 import { getEstimatedJSTime } from '@/lib/data.utils';
 
 export const MainHeader = () => {
     // state
     const processingStatus = useStore(selectProcessingStatus);
+    const { showSubtotal, multithreading } = useStore(selectAdditionalOptions);
+    const { formatValues } = useStore(selectUIOptions);
     const tableRowCount = useStore((state) => state.tableRowCount);
     const tableColumnCount = useStore((state) => state.tableColumnCount);
     const fileName = useStore((state) => state.fileName);
     const latestTiming = useStore((state) => state.latestTiming);
+
+    // dispatch
+    const setAdditionalOptions = useStore((state) => state.setAdditionalOptions);
+    const setUIOptions = useStore((state) => state.setUIOptions);
 
     // Calculate estimated JS time
     const estimatedJSTime =
@@ -59,6 +68,7 @@ export const MainHeader = () => {
         }
     };
 
+    // paint
     return (
         <header className=" w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
             <div className="flex h-15 items-center justify-between px-6">
@@ -68,8 +78,8 @@ export const MainHeader = () => {
                     <h1 className="text-xl font-bold tracking-tight">Blaze Engine</h1>
                 </div>
 
-                {/* Right side - Status and Info */}
-                <div className="flex items-end gap-4">
+                {/* Right side - Status, Info & Controls */}
+                <div className="flex items-center gap-4">
                     {fileName && (
                         <>
                             <div className="flex items-center gap-2 text-sm">
@@ -105,15 +115,46 @@ export const MainHeader = () => {
 
                     {tableRowCount && tableRowCount > 0 && (
                         <>
-                            <div className="text-sm">
-                                <span className="text-muted-foreground">Rows:</span>{' '}
+                            <div className="text-sm space-x-1.5">
+                                <span className="text-muted-foreground">Rows:</span>
                                 <span className="font-semibold">{tableRowCount.toLocaleString()}</span>
                             </div>
                             <Separator orientation="vertical" className="h-6" />
                         </>
                     )}
 
-                    {getStatusBadge()}
+                    <div className="flex items-center gap-4">
+                        {getStatusBadge()}
+
+                        <Separator orientation="vertical" className="h-6" />
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                                    <Settings2 className="h-4 w-4" />
+                                    <span className="sr-only">View options</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-52">
+                                <DropdownMenuItem className="flex items-center justify-between gap-4 text-xs" onSelect={(e) => e.preventDefault()}>
+                                    <span>Show Subtotal</span>
+                                    <Switch checked={showSubtotal} onCheckedChange={(v) => setAdditionalOptions({ showSubtotal: Boolean(v) })} />
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem className="flex items-center justify-between gap-4 text-xs" onSelect={(e) => e.preventDefault()}>
+                                    <span>Multithreading</span>
+                                    <Switch checked={multithreading} onCheckedChange={(v) => setAdditionalOptions({ multithreading: Boolean(v) })} />
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem className="flex items-center justify-between gap-4 text-xs" onSelect={(e) => e.preventDefault()}>
+                                    <span>Format Values</span>
+                                    <Switch checked={formatValues} onCheckedChange={(v) => setUIOptions({ formatValues: Boolean(v) })} />
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
             </div>
         </header>

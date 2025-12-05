@@ -193,6 +193,12 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
 	let query: DataQuery = serde_json::from_str(query_json)
 			.map_err(|e| js_err(&format!("Invalid query JSON: {}", e)))?;
 
+	// Additional options from the frontend
+	let (show_subtotal, multithreading): (bool, bool) = match query.options {
+		Some(ref opts) => (opts.show_subtotal, opts.multithreading),
+		None => (true, false),
+	};
+
     // Load stored data (single lock acquisition per store)
     let schema = STORED_SCHEMA
         .lock()
@@ -218,7 +224,7 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
 
 	// Apply pivot (grouping)
 	if let Some(ref pivot_spec) = query.pivot {
-		batches = pivot::apply_pivot(batches, pivot_spec)?;
+		batches = pivot::apply_pivot(batches, pivot_spec, show_subtotal)?;
 	}
 
 	// Apply sorting

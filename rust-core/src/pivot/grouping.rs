@@ -35,13 +35,14 @@ pub struct LevelState {
 pub(crate) fn group_and_aggregate(
     batch: &RecordBatch,
     pivot_spec: &PivotSpec,
+    show_subtotal: bool,
 ) -> Result<RecordBatch, JsValue> {
     // Get indices for row columns
 
     // Global switch: when false, skip building any subtotal/grand-total rows
     // and only emit detail rows. This avoids LevelState bookkeeping and is
     // faster for cases where subtotals are not needed.
-    let include_subtotals = true;
+    let include_subtotals = show_subtotal;
 
     // When false, we suppress subtotal rows that represent only a single
     // underlying row (e.g. a City with exactly one Area).
