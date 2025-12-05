@@ -291,8 +291,7 @@ class DataService {
 
                 const result = await this.workerClient.processFile(file, (progress) => {
                     console.log(`[DataService] Progress: ${progress.percent}%`);
-                    // You can emit progress to UI here if needed
-                    // store.setLoadingProgress?.(progress.percent);
+                    store.setLoadingProgress?.(progress.percent);
                 });
 
                 if (!result.success) {
@@ -353,6 +352,7 @@ class DataService {
             const allItems = this.createFieldItems();
 
             store.setProcessingStatus('success');
+            this.getData();
 
             return allItems;
         } catch (err) {
@@ -383,6 +383,8 @@ class DataService {
             sort: [],
             options: additionalOptions,
         };
+
+        console.log(query);
 
         const store = useStore.getState();
 
@@ -462,7 +464,7 @@ class DataService {
                 store.setTableColumnCount(this.resultSchema.length);
 
                 const timing: TimingLog = {
-                    operation: 'Processing Query',
+                    operation: 'Processing',
                     duration_ms: response.timeTaken,
                 };
                 store.setLatestTiming(timing);
@@ -614,6 +616,58 @@ class DataService {
         this.resultSchema = [];
         this.rowCount = 0;
         store.incrementTableRenderCounter();
+        this.getData();
+    }
+
+    /**
+     * Refresh metadata after sample data generation
+     */
+    async refreshMetadata(): Promise<void> {
+        try {
+            // Ensure worker is initialized
+            await this.initialize();
+
+            const store = useStore.getState();
+
+            // Get metadata from Rust Worker
+            const metadataResponse = await this.workerClient.getMetaData();
+            if (!metadataResponse.success) {
+                throw new Error(metadataResponse.message || 'Failed to get metadata');
+            }
+
+            const metaTiming: TimingLog = {
+                operation: 'Analyzing Generated Data',
+                duration_ms: metadataResponse.timeTaken,
+            };
+            store.setLatestTiming(metaTiming);
+
+            this.metadata = JSON.parse(metadataResponse.data) as IGetMetaDataResponse;
+
+            store.setTableRowCount(this.metadata.row_count);
+            store.setTableColumnCount(this.metadata.columns.length);
+            store.setFileName('sample_data_generated.csv');
+
+            // Convert metadata to FieldsKeeper items (for sidebar display)
+            this.createFieldItems();
+
+            // Reset pivot buckets to empty state
+            store.setPivotBuckets([
+                { id: 'columns', items: [] },
+                { id: 'values', items: [] },
+            ]);
+
+            this.rowCount = this.metadata.row_count;
+
+            // Fetch data with empty pivot/filter
+            this.getData();
+
+            console.log('[DataService] Metadata refreshed:', this.metadata);
+        } catch (err) {
+            console.error('[DataService] Failed to refresh metadata:', err);
+            const store = useStore.getState();
+            store.setProcessingStatus('error');
+            throw err;
+        }
     }
 
     /**

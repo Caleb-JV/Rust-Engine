@@ -12,7 +12,6 @@ use arrow_string::like;
 
 use crate::error::js_err;
 use crate::query_types::{FilterCondition, FilterOperator, FilterValue};
-use chrono::{NaiveDate, NaiveDateTime};
 
 
 /// Extension helpers for FilterValue so we don't repeat matches everywhere.
@@ -24,10 +23,6 @@ trait FilterValueExt {
     fn as_array_str(&self) -> Result<&[String], JsValue>;
     fn as_range_i64(&self) -> Result<(i64, i64), JsValue>;
     fn as_range_f64(&self) -> Result<(f64, f64), JsValue>;
-    fn as_date32(&self) -> Result<i32, JsValue>;
-    fn as_date_range32(&self) -> Result<(i32, i32), JsValue>;
-    fn as_date64(&self) -> Result<i64, JsValue>;
-    fn as_date_range64(&self) -> Result<(i64, i64), JsValue>;
 }
 
 impl FilterValueExt for FilterValue {
@@ -79,63 +74,6 @@ impl FilterValueExt for FilterValue {
             _ => Err(js_err("Expected range value")),
         }
     }
-    fn as_date32(&self) -> Result<i32, JsValue> {
-        match self {
-            FilterValue::Date(s) => {
-                let d = NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                    .map_err(|_| js_err("Invalid date, expected YYYY-MM-DD"))?;
-                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                Ok(d.signed_duration_since(epoch).num_days() as i32)
-            }
-            _ => Err(js_err("Expected date value")),
-        }
-    }
-
-    fn as_date64(&self) -> Result<i64, JsValue> {
-        match self {
-            FilterValue::Date(s) => {
-                let dt = NaiveDateTime::parse_from_str(&format!("{} 00:00:00", s), "%Y-%m-%d %H:%M:%S")
-                    .map_err(|_| js_err("Invalid date, expected YYYY-MM-DD"))?;
-                Ok(dt.timestamp_millis())
-            }
-            _ => Err(js_err("Expected date value")),
-        }
-    }
-
-    fn as_date_range32(&self) -> Result<(i32, i32), JsValue> {
-        match self {
-            FilterValue::DateRange { min, max } => {
-                let min_d = NaiveDate::parse_from_str(min, "%Y-%m-%d")
-                    .map_err(|_| js_err("Invalid date range min"))?;
-                let max_d = NaiveDate::parse_from_str(max, "%Y-%m-%d")
-                    .map_err(|_| js_err("Invalid date range max"))?;
-
-                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                Ok((
-                    min_d.signed_duration_since(epoch).num_days() as i32,
-                    max_d.signed_duration_since(epoch).num_days() as i32
-                ))
-            }
-            _ => Err(js_err("Expected date range")),
-        }
-    }
-
-    fn as_date_range64(&self) -> Result<(i64, i64), JsValue> {
-        match self {
-            FilterValue::DateRange { min, max } => {
-                let min_dt = NaiveDate::parse_from_str(min, "%Y-%m-%d")
-                    .map_err(|_| js_err("Invalid date range min"))?
-                    .and_hms_opt(0,0,0).unwrap();
-
-                let max_dt = NaiveDate::parse_from_str(max, "%Y-%m-%d")
-                    .map_err(|_| js_err("Invalid date range max"))?
-                    .and_hms_opt(23,59,59).unwrap();
-
-                Ok((min_dt.timestamp_millis(), max_dt.timestamp_millis()))
-            }
-            _ => Err(js_err("Expected date range")),
-        }
-    }
 }
 
 /// Apply filters to record batches using Arrow vectorized kernels.
@@ -181,110 +119,6 @@ pub fn apply_filters(
     Ok(filtered_batches)
 }
 
-fn apply_date32_filter(
-    array: &arrow_array::Date32Array,
-    condition: &FilterCondition,
-) -> Result<BooleanArray, JsValue> {
-
-    let len = array.len();
-
-    let mask = match condition.operator {
-        FilterOperator::Equals
-        | FilterOperator::NotEquals
-        | FilterOperator::GreaterThan
-        | FilterOperator::LessThan
-        | FilterOperator::GreaterThanOrEqual
-        | FilterOperator::LessThanOrEqual => {
-
-            let val = condition.value.as_date32()?;
-            let rhs = arrow_array::Date32Array::from(vec![val; len]);
-
-            let res = match condition.operator {
-                FilterOperator::Equals => cmp::eq(array, &rhs),
-                FilterOperator::NotEquals => cmp::neq(array, &rhs),
-                FilterOperator::GreaterThan => cmp::gt(array, &rhs),
-                FilterOperator::LessThan => cmp::lt(array, &rhs),
-                FilterOperator::GreaterThanOrEqual => cmp::gt_eq(array, &rhs),
-                FilterOperator::LessThanOrEqual => cmp::lt_eq(array, &rhs),
-                _ => unreachable!(),
-            };
-
-            res.map_err(|e| js_err(&format!("Date32 cmp error: {}", e)))?
-        }
-
-        FilterOperator::Between => {
-            let (min32, max32) = condition.value.as_date_range32()?;
-            let min_arr = arrow_array::Date32Array::from(vec![min32; len]);
-            let max_arr = arrow_array::Date32Array::from(vec![max32; len]);
-
-            let ge = cmp::gt_eq(array, &min_arr)
-                .map_err(|e| js_err(&format!("Date32 >= error: {}", e)))?;
-            let le = cmp::lt_eq(array, &max_arr)
-                .map_err(|e| js_err(&format!("Date32 <= error: {}", e)))?;
-
-            boolean_kernels::and(&ge, &le)
-                .map_err(|e| js_err(&format!("Date32 BETWEEN AND error: {}", e)))?
-        }
-
-        _ => return Err(js_err("Unsupported date operator")),
-    };
- 
-    Ok(mask)
-}
-
-
-fn apply_date64_filter(
-    array: &arrow_array::Date64Array,
-    condition: &FilterCondition,
-) -> Result<BooleanArray, JsValue> {
-    let len = array.len();
-
-    let mask = match condition.operator {
-        FilterOperator::Equals
-        | FilterOperator::NotEquals
-        | FilterOperator::GreaterThan
-        | FilterOperator::LessThan
-        | FilterOperator::GreaterThanOrEqual
-        | FilterOperator::LessThanOrEqual => {
-
-            let val = condition.value.as_date64()?;
-            let rhs = arrow_array::Date64Array::from(vec![val; len]);
-
-            let res = match condition.operator {
-                FilterOperator::Equals => cmp::eq(array, &rhs),
-                FilterOperator::NotEquals => cmp::neq(array, &rhs),
-                FilterOperator::GreaterThan => cmp::gt(array, &rhs),
-                FilterOperator::LessThan => cmp::lt(array, &rhs),
-                FilterOperator::GreaterThanOrEqual => cmp::gt_eq(array, &rhs),
-                FilterOperator::LessThanOrEqual => cmp::lt_eq(array, &rhs),
-                _ => unreachable!(),
-            };
-
-            res.map_err(|e| js_err(&format!("Date64 cmp error: {}", e)))?
-        }
-
-        FilterOperator::Between => {
-            let (min_ts, max_ts) = condition.value.as_date_range64()?;
-
-            let min_arr = arrow_array::Date64Array::from(vec![min_ts; len]);
-            let max_arr = arrow_array::Date64Array::from(vec![max_ts; len]);
-
-            let ge = cmp::gt_eq(array, &min_arr)
-                .map_err(|e| js_err(&format!("Date64 >= error: {}", e)))?;
-
-            let le = cmp::lt_eq(array, &max_arr)
-                .map_err(|e| js_err(&format!("Date64 <= error: {}", e)))?;
-
-            boolean_kernels::and(&ge, &le)
-                .map_err(|e| js_err(&format!("Date64 BETWEEN error: {}", e)))?
-        }
-
-        _ => return Err(js_err("Unsupported date operator for Date64")),
-    };
-
-    Ok(mask)
-}
-
 
 /// Dispatch filter condition based on array datatype.
 fn apply_filter_condition(
@@ -320,20 +154,6 @@ fn apply_filter_condition(
                 .ok_or_else(|| js_err("Failed to downcast to BooleanArray"))?;
             apply_boolean_filter(arr, condition)
         }
-        DataType::Date32 => {
-    let arr = array.as_any()
-        .downcast_ref::<arrow_array::Date32Array>()
-        .ok_or_else(|| js_err("Failed to downcast to Date32Array"))?;
-    apply_date32_filter(arr, condition)
-}
-
-DataType::Date64 => {
-    let arr = array.as_any()
-        .downcast_ref::<arrow_array::Date64Array>()
-        .ok_or_else(|| js_err("Failed to downcast to Date64Array"))?;
-    apply_date64_filter(arr, condition)
-}
-
         dt => Err(js_err(&format!(
             "Filtering not supported for type {:?}",
             dt
