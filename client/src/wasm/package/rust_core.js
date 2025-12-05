@@ -213,27 +213,34 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     CLOSURE_DTORS.register(real, state, state);
     return real;
 }
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_externrefs.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
+}
 /**
- * Get all timing log entries
+ * Generate realistic sample data with 5 million rows
+ *
+ * Schema:
+ * - id: Integer (1 to row_count)
+ * - customer_name: String (realistic names)
+ * - region: String (North, South, East, West, Central)
+ * - product_category: String (Electronics, Clothing, Food, Furniture, Books, Toys, Sports, Health)
+ * - product_name: String (combinations of category-specific items)
+ * - quantity: Integer (1 to 100)
+ * - unit_price: Float (10.0 to 999.99)
+ * - total_amount: Float (quantity * unit_price)
+ * - discount_percent: Float (0, 5, 10, 15, 20, 25)
+ * - payment_method: String (Credit Card, Debit Card, Cash, PayPal, Crypto)
+ * - is_premium_customer: Boolean
+ * - satisfaction_score: Integer (1 to 5)
+ * - year: Integer (2020-2024)
+ * - quarter: String (Q1, Q2, Q3, Q4)
+ * - month: String (Jan-Dec)
+ * @param {number} row_count
+ * @param {bigint} seed
  * @returns {any}
- */
-export function get_timing_log() {
-    const ret = wasm.get_timing_log();
-    return ret;
-}
-
-/**
- * Clear the timing log
- */
-export function clear_timing_log() {
-    wasm.clear_timing_log();
-}
-
-/**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- * @param {string} query_json
- * @returns {Promise<any>}
  */
 export function generate_sample_data(row_count, seed) {
     const ret = wasm.generate_sample_data(row_count, seed);
@@ -367,10 +374,25 @@ export function get_processed_data_async(data, pivot, aggregation_map) {
     return ret;
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_externrefs.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
+/**
+ * Async WASM export: seed data and return a structured response with timing
+ * @param {Uint8Array} bytes
+ * @returns {Promise<any>}
+ */
+export function seed_async(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Async WASM export: get meta data with a structured response
+ * @returns {Promise<any>}
+ */
+export function get_meta_data_async() {
+    const ret = wasm.get_meta_data_async();
+    return ret;
 }
 
 /**
@@ -587,14 +609,14 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
+    imports.wbg.__wbindgen_cast_561298c0808a4504 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 364, function: Function { arguments: [Externref], shim_idx: 365, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h56051a08f764ac79, wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8);
+        return ret;
+    };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {
         // Cast intrinsic for `F64 -> Externref`.
         const ret = arg0;
-        return ret;
-    };
-    imports.wbg.__wbindgen_cast_eaf63548c7b568b3 = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 942, function: Function { arguments: [Externref], shim_idx: 943, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {
