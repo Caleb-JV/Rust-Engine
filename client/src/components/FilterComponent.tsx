@@ -149,10 +149,10 @@ export const FilterComponent = () => {
                                                     {/* OPERATOR DROPDOWN */}
                                                     <Select
                                                         value={fc?.operator}
-                                                        onValueChange={(value) => {
+                                                        onValueChange={(value: FilterCondition['operator']) => {
                                                             addOrUpdateFilterCondition({
                                                                 column: col.id,
-                                                                operator: value as FilterCondition['operator'],
+                                                                operator: value,
                                                                 value: fc?.value ?? '',
                                                             });
                                                         }}
