@@ -213,6 +213,18 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     CLOSURE_DTORS.register(real, state, state);
     return real;
 }
+/**
+ * Async version of get_data with a structured response envelope
+ * Returns { columns: [...], rowCount: number } instead of IPC bytes
+ * @param {string} query_json
+ * @returns {Promise<any>}
+ */
+export function get_data_async(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_async(ptr0, len0);
+    return ret;
+}
 
 function passArray8ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 1, 1) >>> 0;
@@ -229,19 +241,6 @@ export function seed_async(bytes) {
     const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.seed_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- * @param {string} query_json
- * @returns {Promise<any>}
- */
-export function get_data_async(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_async(ptr0, len0);
     return ret;
 }
 
@@ -350,12 +349,12 @@ export function seed_chunk(chunk_bytes, has_header) {
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3);
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
@@ -452,7 +451,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(a, state0.b, arg0, arg1);
+                    return wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -530,9 +529,9 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
-    imports.wbg.__wbindgen_cast_26863b35e739bd0e = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 948, function: Function { arguments: [Externref], shim_idx: 949, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h56051a08f764ac79, wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8);
+    imports.wbg.__wbindgen_cast_3fda284bdcf7704e = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 941, function: Function { arguments: [Externref], shim_idx: 942, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
         return ret;
     };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {

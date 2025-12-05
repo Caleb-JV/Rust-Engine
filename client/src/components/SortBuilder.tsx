@@ -67,7 +67,7 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
                 <Select
                     value=""
                     disabled={unusedColumns.length === 0}
-                    onValueChange={(value) => {
+                    onValueChange={(value: string) => {
                         addSort(value);
                     }}
                 >
