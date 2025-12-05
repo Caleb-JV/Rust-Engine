@@ -156,7 +156,6 @@ export class WorkerClient {
     }
 
     /**
-     * Terminate the worker
      * NEW: Process a File using streaming + progress
      */
     async processFile(file: File, onProgress?: (progress: IProcessFileProgress) => void): Promise<IResponse<IProcessFileResult>> {
@@ -170,6 +169,29 @@ export class WorkerClient {
             },
         );
     }
+
+    /**
+     * Get current memory usage in bytes
+     */
+    async getMemoryUsage(): Promise<IResponse<number>> {
+        return this.sendRequest<typeof REQUEST_TYPE.GET_MEMORY_USAGE>({
+            type: REQUEST_TYPE.GET_MEMORY_USAGE,
+        });
+    }
+
+    /**
+     * Generate sample data with Rust
+     */
+    async generateSampleData(rowCount: number, seed: bigint = 42n): Promise<IResponse<number>> {
+        return this.sendRequest<typeof REQUEST_TYPE.GENERATE_SAMPLE_DATA>({
+            type: REQUEST_TYPE.GENERATE_SAMPLE_DATA,
+            payload: { rowCount, seed },
+        });
+    }
+
+    /**
+     * Terminate the worker
+     */
 
     terminate(): void {
         this.worker.terminate();

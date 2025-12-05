@@ -7,10 +7,12 @@ use wasm_bindgen::JsValue;
 
 // Module declarations
 mod api;
+mod data_generator;
 mod error;
 mod filters;
 mod helpers;
 mod operations;
+mod parallel;
 mod pivot;
 mod query_types;
 mod sorting;
@@ -32,6 +34,9 @@ pub use api::{
     seed_async,
     get_processed_data_async
 };
+
+// Re-export data generator
+pub use data_generator::generate_sample_data;
 
 // Re-export streaming seed functions
 use wasm_bindgen::prelude::*;
@@ -100,6 +105,35 @@ pub fn seed_finalize() -> Result<usize, JsValue> {
     Ok(total_rows)
 }
 
+/// ------------------------------------------------------------------
+///   Get current memory usage in bytes
+/// ------------------------------------------------------------------
+#[wasm_bindgen]
+pub fn get_memory_usage() -> usize {
+    storage::get_memory_usage()
+}
+
+/// ------------------------------------------------------------------
+///   Generate sample data and store it directly
+/// ------------------------------------------------------------------
+#[wasm_bindgen]
+pub fn generate_and_seed_sample_data(row_count: usize, seed: u64) -> Result<usize, JsValue> {
+    let batch = data_generator::generate_sample_batch(row_count, seed)
+        .map_err(|e| js_err(&e))?;
+
+    let schema = batch.schema();
+    let total_rows = batch.num_rows();
+
+    // Store globally
+    {
+        let mut schema_lock = STORED_SCHEMA.lock().unwrap();
+        let mut batches_lock = STORED_BATCHES.lock().unwrap();
+        *schema_lock = Some(schema);
+        *batches_lock = Some(vec![batch]);
+    }
+
+    Ok(total_rows)
+}
 
 /// ------------------------------------------------------------------
 ///   CSV → Arrow IPC → store schema + batches
@@ -217,20 +251,69 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
     let mut batches = stored_batches.clone();
     drop(batches_ref);
 
-	// Apply filters
-	if let Some(ref filter_conditions) = query.filters {
-		batches = filters::apply_filters(batches, filter_conditions)?;
-	}
+    // Check if we should use parallel processing
+    let use_parallel = parallel::should_use_parallel(&batches);
+    let total_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
+    let batch_count = batches.len();
+    
+    if use_parallel && multithreading {
+        // Parallel pipeline: split batches and process each chunk independently
+        web_sys::console::log_1(&format!(
+            "⚡ Using PARALLEL processing for {} batches ({} rows)",
+            batch_count, total_rows
+        ).into());
+        
+        batches = parallel::process_pipeline_parallel(
+            batches,
+            query.filters.as_deref(),
+            query.pivot.as_ref(),
+            query.sort.as_deref(),
+            show_subtotal,
+        )?;
+    } else {
+        // Sequential pipeline for small datasets
+        web_sys::console::log_1(&format!(
+            "🐌 Using SEQUENTIAL processing for {} batches ({} rows)",
+            batch_count, total_rows
+        ).into());
+        
+        let seq_start = web_sys::window()
+            .and_then(|w| w.performance())
+            .map(|p| p.now());
+        
+        // Apply filters
+        if let Some(ref filter_conditions) = query.filters {
+            if !filter_conditions.is_empty() {
+            batches = filters::apply_filters(batches, filter_conditions)?;
+            }
+        }
 
-	// Apply pivot (grouping)
-	if let Some(ref pivot_spec) = query.pivot {
-		batches = pivot::apply_pivot(batches, pivot_spec, show_subtotal)?;
-	}
+        // Apply pivot (grouping)
+        if let Some(ref pivot_spec) = query.pivot {
+            if !pivot_spec.rows.is_empty() || !pivot_spec.values.is_empty() {
+            batches = pivot::apply_pivot(batches, pivot_spec , show_subtotal)?;
+            }
+        }
 
-	// Apply sorting
-	if let Some(ref sort_specs) = query.sort {
-		batches = sorting::apply_sorting(batches, sort_specs)?;
-	}
+        // Apply sorting
+        if let Some(ref sort_specs) = query.sort {
+            if !sort_specs.is_empty() {
+            batches = sorting::apply_sorting(batches, sort_specs)?;
+            }
+        }
+        
+        // Log sequential completion time
+        if let Some(start) = seq_start {
+            if let Some(performance) = web_sys::window().and_then(|w| w.performance()) {
+                let duration = performance.now() - start;
+                let final_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
+                web_sys::console::log_1(&format!(
+                    "✅ SEQUENTIAL COMPLETE: {} rows → {} rows, Time: {:.2}ms",
+                    total_rows, final_rows, duration
+                ).into());
+            }
+        }
+    }
 
     // Apply column projection (optimized)
     if let Some(ref cols) = query.columns {
@@ -300,65 +383,6 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
 	Ok(response.into())
 }
 
-/// Apply limit and offset by borrowing slices without cloning batches (fast path)
-fn apply_limit_offset_borrow(
-    batches: &[RecordBatch],
-    offset: usize,
-    limit: Option<usize>,
-) -> Result<Vec<RecordBatch>, JsValue> {
-    if batches.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let mut total_rows = 0;
-    for batch in batches {
-        total_rows += batch.num_rows();
-    }
-
-    if offset >= total_rows {
-        return Ok(Vec::new());
-    }
-
-    let mut result = Vec::new();
-    let mut rows_skipped = 0;
-    let mut rows_taken = 0;
-    let max_rows = limit.unwrap_or(total_rows - offset);
-
-    for batch in batches {
-        let batch_rows = batch.num_rows();
-        
-        // Skip batches before offset
-        if rows_skipped + batch_rows <= offset {
-            rows_skipped += batch_rows;
-            continue;
-        }
-
-        // Check if we've taken enough rows
-        if rows_taken >= max_rows {
-            break;
-        }
-
-        // Calculate slice range for this batch
-        let start = if rows_skipped < offset {
-            offset - rows_skipped
-        } else {
-            0
-        };
-
-        let remaining = max_rows - rows_taken;
-        let end = (start + remaining).min(batch_rows);
-
-        if start < end {
-            let sliced = batch.slice(start, end - start);
-            result.push(sliced);
-            rows_taken += end - start;
-        }
-
-        rows_skipped += batch_rows;
-    }
-
-    Ok(result)
-}
 
 /// Apply limit and offset to batches (for owned batches after other operations)
 fn apply_limit_offset(

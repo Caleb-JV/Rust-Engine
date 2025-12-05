@@ -34,8 +34,6 @@ pub enum FilterValue {
     Boolean(bool),
     Array(Vec<String>),
     Range { min: f64, max: f64 },
-    Date(String),           
-    DateRange { min: String, max: String },  
 }
 
 /// Sort direction

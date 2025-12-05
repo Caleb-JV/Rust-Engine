@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { dataService } from '../services/dataService';
-import { useStore, selectProcessingStatus } from '../store/fieldsStore';
+import { useStore, selectProcessingStatus, selectLoadingProgress, selectUIOptions } from '../store/fieldsStore';
 import { useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { millify } from 'millify';
 import FileUploader from './Header/FileUploader';
 
 export const TableView = () => {
     const processingStatus = useStore(selectProcessingStatus);
     const tableRenderCounter = useStore((state) => state.tableRenderCounter);
+    const { formatValues } = useStore(selectUIOptions);
 
     const parentRef = useRef<HTMLDivElement | null>(null);
     const headerRowRef = useRef<HTMLDivElement | null>(null);
@@ -103,6 +105,8 @@ export const TableView = () => {
                                                             <span className="truncate w-full">
                                                                 {value === null || value === undefined ? (
                                                                     <span className="text-muted-foreground italic">null</span>
+                                                                ) : typeof value === 'number' && Math.abs(value) >= 10000 && formatValues ? (
+                                                                    millify(value, { precision: 2 })
                                                                 ) : (
                                                                     String(value)
                                                                 )}

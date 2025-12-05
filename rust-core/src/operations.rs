@@ -295,61 +295,6 @@ pub fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
             })
         }
 
-        // DATE & DATETIME
-        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) => {
-            use arrow_array::{Date32Array, Date64Array, TimestampNanosecondArray};
-
-            let mut min = i64::MAX;
-            let mut max = i64::MIN;
-
-            for arr in arrays {
-                if let Some(a) = arr.as_any().downcast_ref::<Date32Array>() {
-                    for i in 0..a.len() {
-                        if a.is_valid(i) {
-                            let v = a.value(i) as i64;
-                            if v < min {
-                                min = v;
-                            }
-                            if v > max {
-                                max = v;
-                            }
-                        }
-                    }
-                } else if let Some(a) = arr.as_any().downcast_ref::<Date64Array>() {
-                    for i in 0..a.len() {
-                        if a.is_valid(i) {
-                            let v = a.value(i);
-                            if v < min {
-                                min = v;
-                            }
-                            if v > max {
-                                max = v;
-                            }
-                        }
-                    }
-                } else if let Some(a) = arr.as_any().downcast_ref::<TimestampNanosecondArray>() {
-                    for i in 0..a.len() {
-                        if a.is_valid(i) {
-                            let v = a.value(i);
-                            if v < min {
-                                min = v;
-                            }
-                            if v > max {
-                                max = v;
-                            }
-                        }
-                    }
-                }
-            }
-
-            json!({
-                "column": col_name,
-                "type": "date",
-                "min": min,
-                "max": max
-            })
-        }
-
         // UNSUPPORTED TYPE
         other => {
             return Err(js_err(&format!(

@@ -3,6 +3,7 @@ import { selectProcessingStatus, useStore } from '@/store/fieldsStore';
 import { dataService } from '@/services/dataService';
 import { UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { getWorkerClient } from '@/worker/WorkerClient';
 
 export default function FileUploader() {
     // state
@@ -46,8 +47,35 @@ export default function FileUploader() {
         fileInputRef.current?.click();
     };
 
-    const handleLoadSampleData = () => {
-        // dataService.loadSampleData();
+    const handleGenerateSampleData = async () => {
+        try {
+            const rowCount = 10_000_000; // 5 million rows
+            const seed = BigInt(Date.now());
+
+            useStore.getState().setProcessingStatus('loading');
+            useStore.getState().setFileName('sample_data.csv');
+
+            console.log(`🔨 Generating ${rowCount.toLocaleString()} rows of sample data...`);
+
+            // Generate and seed the data via worker
+            const workerClient = getWorkerClient();
+            const response = await workerClient.generateSampleData(rowCount, seed);
+
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to generate sample data');
+            }
+
+            console.log(`✅ Generated ${response.data.toLocaleString()} rows in ${response.timeTaken.toFixed(2)}ms`);
+
+            // Trigger metadata refresh
+            await dataService.refreshMetadata();
+
+            useStore.getState().setProcessingStatus('success');
+        } catch (error) {
+            console.error('Failed to generate sample data:', error);
+            useStore.getState().setProcessingStatus('error');
+            useStore.getState().setFileName('');
+        }
     };
 
     // compute
@@ -90,7 +118,7 @@ export default function FileUploader() {
                             {isLoading ? 'Processing...' : 'Browse local file'}
                         </Button>
 
-                        <Button onClick={handleLoadSampleData} disabled={isLoading} variant="default" className="mt-1">
+                        <Button onClick={handleGenerateSampleData} disabled={isLoading} variant="default" className="mt-1">
                             {isLoading ? 'Processing...' : 'Load sample data'}
                         </Button>
                     </div>
