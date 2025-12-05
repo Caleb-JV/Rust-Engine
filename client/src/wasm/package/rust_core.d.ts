@@ -1,6 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * Get all timing log entries
+ */
+export function get_timing_log(): any;
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log(): void;
+/**
  * Generate realistic sample data with 5 million rows
  * 
  * Schema:
@@ -86,9 +94,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly clear_timing_log: () => void;
-  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
   readonly get_timing_log: () => any;
-  readonly generate_and_seed_sample_data: (a: number, b: bigint) => [number, number, number];
   readonly get_data_async: (a: number, b: number) => any;
   readonly get_filter_options_async: (a: number, b: number) => any;
   readonly get_memory_usage: () => number;
