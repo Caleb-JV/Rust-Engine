@@ -3,6 +3,7 @@ import { FilterComponent } from '@/components/FilterComponent';
 import { useState } from 'react';
 import { SortPane } from '@/components/SortPane';
 import { CollapsedPaneComponent, PanelHeader } from '@/components/PaneChrome';
+import { PANEL_WIDTH } from '@/lib/common.constants';
 
 export const FilterPane = () => {
     // state
@@ -16,7 +17,7 @@ export const FilterPane = () => {
     if (isCollapsed) return <CollapsedPaneComponent label="Filters & Sorts" onExpand={() => setIsCollapsed(false)} />;
 
     return (
-        <div className=" flex flex-col border-r bg-background overflow-auto shrink-0" style={{ width: '280px' }}>
+        <div className=" flex flex-col border-r bg-background overflow-auto shrink-0" style={{ width: PANEL_WIDTH }}>
             <PanelHeader title="Filters & Sorts" onCollapse={() => setIsCollapsed(true)} />
             <div className="flex border-b">
                 <button

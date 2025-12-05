@@ -10,6 +10,15 @@ export interface IColumnField {
     aggregate?: TAggregationType;
 }
 
+export interface IAdditionalOptions {
+    showSubtotal: boolean;
+    multithreading: boolean;
+}
+
+export interface IUIOptions {
+    formatValues: boolean;
+}
+
 export type ActiveTab = 'sorts' | 'filters';
 
 export type ProcessingStatus = 'idle' | 'loading' | 'processing' | 'success' | 'error';
@@ -65,11 +74,14 @@ interface IRootState {
     // Pivot Buckets
     pivotBuckets: IFieldsKeeperBucket<IColumnField>[];
 
-    // Filter Buckets
-    filterBuckets: IFieldsKeeperBucket<IColumnField>[];
-
     // Filter condition
     filterCondition: FilterCondition[];
+
+    // Additional UI / computation options
+    additionalOptions: IAdditionalOptions;
+
+    // Additional UI / computation options
+    uiOptions: IUIOptions;
 
     // Actions
     setProcessingStatus: (status: ProcessingStatus) => void;
@@ -84,11 +96,14 @@ interface IRootState {
     setFiltersPaneCollapsed: (collapsed: boolean) => void;
     setPivotPaneCollapsed: (collapsed: boolean) => void;
     setPivotBuckets: (buckets: IFieldsKeeperBucket<IColumnField>[]) => void;
-    setFilterBuckets: (buckets: IFieldsKeeperBucket<IColumnField>[]) => void;
     clearPivotBuckets: () => void;
+    clearAllAssignments: () => void;
     resetStore: () => void;
     addOrUpdateFilterCondition: ({ column, operator, value }: FilterCondition) => void;
     removeFilterCondition: (column: string) => void;
+    removeAllFilters: () => void;
+    setAdditionalOptions: (options: Partial<IAdditionalOptions>) => void;
+    setUIOptions: (options: Partial<IUIOptions>) => void;
 }
 
 const initialState = {
@@ -108,6 +123,13 @@ const initialState = {
     ],
     filterBuckets: [{ id: 'filters', items: [] }],
     filterCondition: [] as FilterCondition[],
+    additionalOptions: {
+        showSubtotal: true,
+        multithreading: false,
+    } as IAdditionalOptions,
+    uiOptions: {
+        formatValues: true,
+    } as IUIOptions,
 };
 
 export const useStore = create<IRootState>()(
@@ -172,6 +194,20 @@ export const useStore = create<IRootState>()(
             // Pivot Actions
             setPivotBuckets: (buckets) => set({ pivotBuckets: buckets }, false, 'setPivotBuckets'),
 
+            clearAllAssignments: () =>
+                set(
+                    {
+                        pivotBuckets: initialState.pivotBuckets.map((b) => ({
+                            ...b,
+                            items: [],
+                        })),
+                        filterCondition: [],
+                        error: null,
+                    },
+                    false,
+                    'clearAllAssignments',
+                ),
+
             clearPivotBuckets: () =>
                 set(
                     {
@@ -183,9 +219,6 @@ export const useStore = create<IRootState>()(
                     false,
                     'clearPivotBuckets',
                 ),
-
-            // Filter Actions
-            setFilterBuckets: (buckets) => set({ filterBuckets: buckets }, false, 'setFilterBuckets'),
 
             // Reset
             resetStore: () => set(initialState, false, 'resetStore'),
@@ -221,6 +254,13 @@ export const useStore = create<IRootState>()(
                     false,
                     'removeFilterCondition',
                 ),
+
+            removeAllFilters: () => set(() => ({ filterCondition: [] }), false, 'removeAllFilters'),
+
+            setAdditionalOptions: (options) =>
+                set((state) => ({ additionalOptions: { ...state.additionalOptions, ...options } }), false, 'setAdditionalOptions'),
+
+            setUIOptions: (options) => set((state) => ({ uiOptions: { ...state.uiOptions, ...options } }), false, 'setUIOptions'),
         }),
         { name: 'FieldsStore' },
     ),
@@ -231,8 +271,9 @@ export const selectProcessingStatus = (state: IRootState) => state.processingSta
 export const selectError = (state: IRootState) => state.error;
 export const selectActiveTab = (state: IRootState) => state.panelState.activeTab;
 export const selectPivotBuckets = (state: IRootState) => state.pivotBuckets;
-export const selectFilterBuckets = (state: IRootState) => state.filterBuckets;
 export const selectDataPaneCollapsed = (state: IRootState) => state.panelState.isDataPaneCollapsed;
 export const selectFiltersPaneCollapsed = (state: IRootState) => state.panelState.isFiltersPaneCollapsed;
 export const selectPivotPaneCollapsed = (state: IRootState) => state.panelState.isPivotPaneCollapsed;
 export const selectFiltercondition = (state: IRootState) => state.filterCondition;
+export const selectAdditionalOptions = (state: IRootState) => state.additionalOptions;
+export const selectUIOptions = (state: IRootState) => state.uiOptions;

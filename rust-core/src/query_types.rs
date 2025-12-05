@@ -93,6 +93,16 @@ fn default_pivot_aggregation() -> PivotAggregation {
     PivotAggregation::Sum
 }
 
+/// Additional options passed from the frontend for tuning pivot behavior
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdditionalOptions {
+    #[serde(default)]
+    pub show_subtotal: bool,
+    #[serde(default)]
+    pub multithreading: bool,
+}
+
 /// Complete query specification
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DataQuery {
@@ -102,4 +112,5 @@ pub struct DataQuery {
     pub pivot: Option<PivotSpec>,
     pub limit: Option<usize>,
     pub offset: Option<usize>,
+    pub options: Option<AdditionalOptions>,
 }

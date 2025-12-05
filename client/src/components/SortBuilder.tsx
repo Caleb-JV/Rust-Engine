@@ -156,8 +156,8 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
 
             {/* Help Text */}
             {availableColumns.length === 0 && (
-                <div className="text-xs text-muted-foreground bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 rounded-md">
-                    👆 Add columns in the Pivot tab to enable sorting
+                <div className="text-xs text-muted-foreground bg-gray-300/10 border border-gray-300/20 px-3 py-2.5 rounded-md">
+                    Add columns in the Pivot tab to enable sorting
                 </div>
             )}
         </div>

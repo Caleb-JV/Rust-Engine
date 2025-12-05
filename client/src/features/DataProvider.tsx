@@ -32,7 +32,7 @@ export default function DataProvider(props: IDataProvider) {
     };
 
     return (
-        <main className="grid grid-cols-[auto_auto_auto_1fr] h-[calc(100vh-68px)]">
+        <main className="grid grid-cols-[auto_auto_auto_1fr] h-[calc(100vh-60px)]">
             <FieldsKeeperProvider instanceId="pivot" allItems={allPivotItems} buckets={pivotBuckets} onUpdate={onPivotUpdate}>
                 {children}
             </FieldsKeeperProvider>

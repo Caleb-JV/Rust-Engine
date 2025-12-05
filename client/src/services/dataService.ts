@@ -17,7 +17,7 @@ import {
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
-import type { IColumnField, TimingLog } from '../store/fieldsStore';
+import type { IAdditionalOptions, IColumnField, TimingLog } from '../store/fieldsStore';
 import { useStore } from '../store/fieldsStore';
 import { getWorkerClient } from '../worker/WorkerClient';
 import { getPivotItemsToFetchData } from '@/lib/data.utils';
@@ -63,6 +63,7 @@ export interface DataQuery {
     sort?: SortSpec[];
     limit?: number;
     offset?: number;
+    options?: IAdditionalOptions;
 }
 
 interface ArrowColumnBuffer {
@@ -273,9 +274,9 @@ class DataService {
         const store = useStore.getState();
 
         try {
+            store.resetStore();
+
             store.setProcessingStatus('loading');
-            store.setError(null);
-            store.setLatestTiming(null); // Clear old timing
 
             // 1. Initialize WASM
             await this.initialize();
@@ -374,12 +375,13 @@ class DataService {
      * NEW: Uses columnar buffers instead of IPC for zero-copy performance
      */
     getData(): void {
-        const { filterCondition, pivotBuckets } = useStore.getState();
+        const { filterCondition, pivotBuckets, additionalOptions } = useStore.getState();
 
         const query: DataQuery = {
             filters: filterCondition,
             pivot: getPivotItemsToFetchData(pivotBuckets),
             sort: [],
+            options: additionalOptions,
         };
 
         const store = useStore.getState();
@@ -590,14 +592,12 @@ class DataService {
         const store = useStore.getState();
         const allItems = this.getAllFieldItems();
 
+        store.removeAllFilters();
         // Set all columns in columns bucket
         store.setPivotBuckets([
-            { id: 'columns', items: allItems },
-            { id: 'values', items: [] },
+            { id: 'columns', items: allItems.filter((item) => item.value?.dataType !== 'number') },
+            { id: 'values', items: allItems.filter((item) => item.value?.dataType === 'number') },
         ]);
-
-        // Clear filters
-        store.setFilterBuckets([{ id: 'filters', items: [] }]);
 
         // Fetch all data
         this.getData();
@@ -608,10 +608,8 @@ class DataService {
      */
     clearAllData(): void {
         const store = useStore.getState();
-        store.setPivotBuckets([
-            { id: 'columns', items: [] },
-            { id: 'values', items: [] },
-        ]);
+        store.clearAllAssignments();
+
         this.resultColumns.clear();
         this.resultSchema = [];
         this.rowCount = 0;

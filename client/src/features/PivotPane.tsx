@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { FieldsKeeperBucket, type IFieldsKeeperBucket, type IFieldsKeeperItem, type ISuffixBucketNodeRendererProps } from 'react-fields-keeper';
 import { CollapsedPaneComponent, PanelHeader } from '@/components/PaneChrome';
 import { dataService } from '@/services/dataService';
+import { PANEL_WIDTH } from '@/lib/common.constants';
 
 const AGGREGATION_OPTIONS = ['sum', 'average', 'min', 'max', 'count'];
 
@@ -75,7 +76,7 @@ export const PivotPane = () => {
     }
 
     return (
-        <div className="h-full flex flex-col border-r bg-background overflow-y-auto shrink-0" style={{ width: '320px' }}>
+        <div className="h-full flex flex-col border-r bg-background overflow-y-auto shrink-0" style={{ width: PANEL_WIDTH }}>
             <PanelHeader title="Pivot" onCollapse={() => setIsCollapsed(true)} />
 
             <div className="flex-1 overflow-y-auto p-4">

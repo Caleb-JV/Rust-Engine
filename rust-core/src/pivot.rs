@@ -14,6 +14,7 @@ use grouping::group_and_aggregate;
 pub fn apply_pivot(
     batches: Vec<RecordBatch>,
     pivot_spec: &PivotSpec,
+    show_subtotal: bool,
 ) -> Result<Vec<RecordBatch>, JsValue> {
     if batches.is_empty() {
         return Ok(batches);
@@ -28,6 +29,6 @@ pub fn apply_pivot(
         batches[0].clone()
     };
 
-    let result = group_and_aggregate(&combined, pivot_spec)?;
+    let result = group_and_aggregate(&combined, pivot_spec, show_subtotal)?;
     Ok(vec![result])
 }
