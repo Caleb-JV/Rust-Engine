@@ -214,6 +214,22 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     return real;
 }
 /**
+ * Get all timing log entries
+ * @returns {any}
+ */
+export function get_timing_log() {
+    const ret = wasm.get_timing_log();
+    return ret;
+}
+
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log() {
+    wasm.clear_timing_log();
+}
+
+/**
  * Async version of get_data with a structured response envelope
  * Returns { columns: [...], rowCount: number } instead of IPC bytes
  * @param {string} query_json
@@ -281,22 +297,6 @@ export function get_processed_data_async(data, pivot, aggregation_map) {
     const len2 = WASM_VECTOR_LEN;
     const ret = wasm.get_processed_data_async(ptr0, len0, ptr1, len1, ptr2, len2);
     return ret;
-}
-
-/**
- * Get all timing log entries
- * @returns {any}
- */
-export function get_timing_log() {
-    const ret = wasm.get_timing_log();
-    return ret;
-}
-
-/**
- * Clear the timing log
- */
-export function clear_timing_log() {
-    wasm.clear_timing_log();
 }
 
 function takeFromExternrefTable0(idx) {
@@ -529,14 +529,14 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
-    imports.wbg.__wbindgen_cast_3fda284bdcf7704e = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 941, function: Function { arguments: [Externref], shim_idx: 942, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
-        return ret;
-    };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {
         // Cast intrinsic for `F64 -> Externref`.
         const ret = arg0;
+        return ret;
+    };
+    imports.wbg.__wbindgen_cast_eaf63548c7b568b3 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 942, function: Function { arguments: [Externref], shim_idx: 943, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {

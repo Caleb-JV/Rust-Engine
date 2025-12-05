@@ -1,6 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * Get all timing log entries
+ */
+export function get_timing_log(): any;
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log(): void;
+/**
  * Async version of get_data with a structured response envelope
  * Returns { columns: [...], rowCount: number } instead of IPC bytes
  */
@@ -21,14 +29,6 @@ export function get_filter_options_async(col_name: string): Promise<any>;
  * Async version of get_processed_data with a structured response envelope
  */
 export function get_processed_data_async(data: string, pivot: string, aggregation_map: string): Promise<any>;
-/**
- * Get all timing log entries
- */
-export function get_timing_log(): any;
-/**
- * Clear the timing log
- */
-export function clear_timing_log(): void;
 /**
  * ------------------------------------------------------------------
  *   STREAMING API: Finalize streaming (returns total row count)
@@ -52,13 +52,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly clear_timing_log: () => void;
+  readonly get_timing_log: () => any;
   readonly get_data_async: (a: number, b: number) => any;
   readonly get_filter_options_async: (a: number, b: number) => any;
   readonly get_meta_data_async: () => any;
   readonly get_processed_data_async: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
   readonly seed_async: (a: number, b: number) => any;
-  readonly clear_timing_log: () => void;
-  readonly get_timing_log: () => any;
   readonly seed_chunk: (a: number, b: number, c: number) => [number, number];
   readonly seed_finalize: () => [number, number, number];
   readonly seed_start: (a: number, b: number) => [number, number];
