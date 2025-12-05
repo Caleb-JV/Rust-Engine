@@ -3,7 +3,7 @@ import { Upload, ChevronLeft, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FieldSearch } from '@/components/FieldSearch';
 import { FieldsKeeperRootBucket } from 'react-fields-keeper';
-import { useStore, selectDataPaneCollapsed, selectProcessingStatus } from '@/store/fieldsStore';
+import { useAppStore, selectDataPaneCollapsed, selectProcessingStatus } from '@/store/appStore';
 import { dataService } from '@/services/dataService';
 import { CollapsedPaneComponent, PanelHeader } from '@/components/PaneChrome';
 import { PANEL_WIDTH } from '@/lib/common.constants';
@@ -12,12 +12,12 @@ export const DataPane = () => {
     // state
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const processingStatus = useStore(selectProcessingStatus);
-    const isCollapsed = useStore(selectDataPaneCollapsed);
+    const processingStatus = useAppStore(selectProcessingStatus);
+    const isCollapsed = useAppStore(selectDataPaneCollapsed);
 
     // dispatch
-    const setIsCollapsed = useStore((state) => state.setDataPaneCollapsed);
-    const setFileName = useStore((state) => state.setFileName);
+    const setIsCollapsed = useAppStore((state) => state.setDataPaneCollapsed);
+    const setFileName = useAppStore((state) => state.setFileName);
 
     // compute
     const metadata = dataService.getMetadata();

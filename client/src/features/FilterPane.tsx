@@ -1,4 +1,4 @@
-import { useStore, selectFiltersPaneCollapsed } from '@/store/fieldsStore';
+import { useAppStore, selectFiltersPaneCollapsed } from '@/store/appStore';
 import { FilterComponent } from '@/components/FilterComponent';
 import { useState } from 'react';
 import { SortPane } from '@/components/SortPane';
@@ -7,11 +7,11 @@ import { PANEL_WIDTH } from '@/lib/common.constants';
 
 export const FilterPane = () => {
     // state
-    const isCollapsed = useStore(selectFiltersPaneCollapsed);
+    const isCollapsed = useAppStore(selectFiltersPaneCollapsed);
     const [activeTab, setActiveTab] = useState('filters');
 
     // dispatch
-    const setIsCollapsed = useStore((state) => state.setFiltersPaneCollapsed);
+    const setIsCollapsed = useAppStore((state) => state.setFiltersPaneCollapsed);
 
     // paint
     if (isCollapsed) return <CollapsedPaneComponent label="Filters & Sorts" onExpand={() => setIsCollapsed(false)} />;

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { selectProcessingStatus, useStore } from '@/store/fieldsStore';
+import { selectProcessingStatus, useAppStore } from '@/store/appStore';
 import { dataService } from '@/services/dataService';
 import { UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
@@ -7,8 +7,8 @@ import { Button } from '@/components/ui';
 export default function FileUploader() {
     // state
     const [isDragging, setIsDragging] = useState(false);
-    const setFileName = useStore((state) => state.setFileName);
-    const processingStatus = useStore(selectProcessingStatus);
+    const setFileName = useAppStore((state) => state.setFileName);
+    const processingStatus = useAppStore(selectProcessingStatus);
 
     // ref
     const fileInputRef = useRef<HTMLInputElement>(null);

@@ -1,5 +1,5 @@
 import type { IFieldsKeeperBucket } from 'react-fields-keeper';
-import type { IColumnField } from '@/store/fieldsStore';
+import type { IColumnField } from '@/store/appStore';
 
 /**
  * Helper functions for pivot operations

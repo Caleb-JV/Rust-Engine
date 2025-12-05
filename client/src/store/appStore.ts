@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { IFieldsKeeperBucket } from 'react-fields-keeper';
-import type { TAggregationType } from '../services/dataService';
+import type { ISortOption, TAggregationType } from '../services/dataService';
 
 export interface IColumnField {
     id: string;
@@ -48,7 +48,6 @@ export interface FilterCondition {
 interface IRootState {
     // App Status
     processingStatus: ProcessingStatus;
-    error: string | null;
     tableRowCount?: number;
     tableColumnCount?: number;
 
@@ -77,6 +76,9 @@ interface IRootState {
     // Filter condition
     filterCondition: FilterCondition[];
 
+    // Sort options
+    sortOptions: ISortOption[];
+
     // Additional UI / computation options
     additionalOptions: IAdditionalOptions;
 
@@ -88,7 +90,6 @@ interface IRootState {
     setTableRowCount: (count: number) => void;
     setTableColumnCount: (count: number) => void;
     setFileName: (name: string) => void;
-    setError: (error: string | null) => void;
     setActiveTab: (tab: ActiveTab) => void;
     incrementTableRenderCounter: () => void;
     setLatestTiming: (log: TimingLog | null) => void;
@@ -104,6 +105,7 @@ interface IRootState {
     removeAllFilters: () => void;
     setAdditionalOptions: (options: Partial<IAdditionalOptions>) => void;
     setUIOptions: (options: Partial<IUIOptions>) => void;
+    setSortOptions: (sorts: ISortOption[]) => void;
 }
 
 const initialState = {
@@ -123,6 +125,7 @@ const initialState = {
     ],
     filterBuckets: [{ id: 'filters', items: [] }],
     filterCondition: [] as FilterCondition[],
+    sortOptions: [] as ISortOption[],
     additionalOptions: {
         showSubtotal: true,
         multithreading: false,
@@ -132,7 +135,7 @@ const initialState = {
     } as IUIOptions,
 };
 
-export const useStore = create<IRootState>()(
+export const useAppStore = create<IRootState>()(
     devtools(
         (set) => ({
             ...initialState,
@@ -145,8 +148,6 @@ export const useStore = create<IRootState>()(
             setTableColumnCount: (count) => set({ tableColumnCount: count }, false, 'setTableColumnCount'),
 
             setFileName: (name) => set({ fileName: name }, false, 'setFileName'),
-
-            setError: (error) => set({ error }, false, 'setError'),
 
             incrementTableRenderCounter: () =>
                 set((state) => ({ tableRenderCounter: state.tableRenderCounter + 1 }), false, 'incrementTableRenderCounter'),
@@ -202,7 +203,6 @@ export const useStore = create<IRootState>()(
                             items: [],
                         })),
                         filterCondition: [],
-                        error: null,
                     },
                     false,
                     'clearAllAssignments',
@@ -261,6 +261,8 @@ export const useStore = create<IRootState>()(
                 set((state) => ({ additionalOptions: { ...state.additionalOptions, ...options } }), false, 'setAdditionalOptions'),
 
             setUIOptions: (options) => set((state) => ({ uiOptions: { ...state.uiOptions, ...options } }), false, 'setUIOptions'),
+
+            setSortOptions: (sorts) => set({ sortOptions: sorts }, false, 'setSortOptions'),
         }),
         { name: 'FieldsStore' },
     ),
@@ -268,7 +270,6 @@ export const useStore = create<IRootState>()(
 
 // Selectors for optimized re-renders
 export const selectProcessingStatus = (state: IRootState) => state.processingStatus;
-export const selectError = (state: IRootState) => state.error;
 export const selectActiveTab = (state: IRootState) => state.panelState.activeTab;
 export const selectPivotBuckets = (state: IRootState) => state.pivotBuckets;
 export const selectDataPaneCollapsed = (state: IRootState) => state.panelState.isDataPaneCollapsed;

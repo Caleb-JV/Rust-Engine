@@ -1,13 +1,13 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { dataService } from '../services/dataService';
-import { useStore, selectProcessingStatus } from '../store/fieldsStore';
+import { useAppStore, selectProcessingStatus } from '../store/appStore';
 import { useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import FileUploader from './Header/FileUploader';
 
 export const TableView = () => {
-    const processingStatus = useStore(selectProcessingStatus);
-    const tableRenderCounter = useStore((state) => state.tableRenderCounter);
+    const processingStatus = useAppStore(selectProcessingStatus);
+    const tableRenderCounter = useAppStore((state) => state.tableRenderCounter);
 
     const parentRef = useRef<HTMLDivElement | null>(null);
     const headerRowRef = useRef<HTMLDivElement | null>(null);

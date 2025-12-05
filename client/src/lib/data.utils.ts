@@ -1,5 +1,5 @@
 import type { IColumnInfo, IPivotOptions } from '@/services/dataService';
-import type { IColumnField } from '@/store/fieldsStore';
+import type { IColumnField } from '@/store/appStore';
 import type { IFieldsKeeperBucket } from 'react-fields-keeper';
 
 export const getCurrentPivotItems = (pivotBuckets: IFieldsKeeperBucket<IColumnField>[]) => {

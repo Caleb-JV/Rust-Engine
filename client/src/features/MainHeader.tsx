@@ -4,23 +4,23 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import { useStore } from '@/store/fieldsStore';
-import { selectProcessingStatus, selectAdditionalOptions, selectUIOptions } from '@/store/fieldsStore';
+import { useAppStore } from '@/store/appStore';
+import { selectProcessingStatus, selectAdditionalOptions, selectUIOptions } from '@/store/appStore';
 import { getEstimatedJSTime } from '@/lib/data.utils';
 
 export const MainHeader = () => {
     // state
-    const processingStatus = useStore(selectProcessingStatus);
-    const { showSubtotal, multithreading } = useStore(selectAdditionalOptions);
-    const { formatValues } = useStore(selectUIOptions);
-    const tableRowCount = useStore((state) => state.tableRowCount);
-    const tableColumnCount = useStore((state) => state.tableColumnCount);
-    const fileName = useStore((state) => state.fileName);
-    const latestTiming = useStore((state) => state.latestTiming);
+    const processingStatus = useAppStore(selectProcessingStatus);
+    const { showSubtotal, multithreading } = useAppStore(selectAdditionalOptions);
+    const { formatValues } = useAppStore(selectUIOptions);
+    const tableRowCount = useAppStore((state) => state.tableRowCount);
+    const tableColumnCount = useAppStore((state) => state.tableColumnCount);
+    const fileName = useAppStore((state) => state.fileName);
+    const latestTiming = useAppStore((state) => state.latestTiming);
 
     // dispatch
-    const setAdditionalOptions = useStore((state) => state.setAdditionalOptions);
-    const setUIOptions = useStore((state) => state.setUIOptions);
+    const setAdditionalOptions = useAppStore((state) => state.setAdditionalOptions);
+    const setUIOptions = useAppStore((state) => state.setUIOptions);
 
     // Calculate estimated JS time
     const estimatedJSTime =

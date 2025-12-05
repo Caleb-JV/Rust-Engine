@@ -1,24 +1,27 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { GripVertical, X, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { SortSpec } from '../services/dataService';
-import { useStore } from '../store/fieldsStore';
-import { getCurrentPivotItems } from '@/lib/data.utils';
+import type { ISortOption } from '../services/dataService';
+import { useAppStore } from '../store/appStore';
 
-interface SortBuilderProps {
-    onSortChange?: (sorts: SortSpec[]) => void;
+interface ISortBuilderProps {
+    sorts: ISortOption[];
 }
 
-export function SortBuilder({ onSortChange }: SortBuilderProps) {
-    const pivotBuckets = useStore((state) => state.pivotBuckets);
-    const [sorts, setSorts] = useState<SortSpec[]>([]);
+export function SortBuilder(props: ISortBuilderProps) {
+    // props
+    const { sorts } = props;
+
+    // state
+    const pivotBuckets = useAppStore((state) => state.pivotBuckets);
+    const setSortOptions = useAppStore((state) => state.setSortOptions);
 
     // Get available columns from the columns bucket
     const availableColumns = useMemo(() => {
-        const columnsBucket = getCurrentPivotItems(pivotBuckets);
+        const columnsBucket = pivotBuckets.find((b) => b.id === 'columns')?.items;
         return (
             columnsBucket?.map((item) => ({
                 name: item.value?.name || '',
@@ -27,11 +30,10 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
         );
     }, [pivotBuckets]);
 
-    // Auto-apply sorts whenever they change
-    useEffect(() => {
-        onSortChange?.(sorts);
-    }, [sorts, onSortChange]);
+    // Get columns not yet used in sorts
+    const unusedColumns = availableColumns.filter((col) => !sorts.some((s) => s.column === col.name));
 
+    // handlers
     const addSort = (column: string) => {
         if (!column) return;
 
@@ -39,26 +41,24 @@ export function SortBuilder({ onSortChange }: SortBuilderProps) {
         const existingIndex = sorts.findIndex((s) => s.column === column);
         if (existingIndex >= 0) return;
 
-        setSorts([...sorts, { column, direction: 'asc' }]);
+        setSortOptions([...sorts, { column, direction: 'asc' }]);
     };
 
     const toggleDirection = (index: number) => {
         const newSorts = [...sorts];
         newSorts[index].direction = newSorts[index].direction === 'asc' ? 'desc' : 'asc';
-        setSorts(newSorts);
+        setSortOptions(newSorts);
     };
 
     const removeSort = (index: number) => {
-        setSorts(sorts.filter((_, i) => i !== index));
+        setSortOptions(sorts.filter((_, i) => i !== index));
     };
 
     const clearAllSorts = () => {
-        setSorts([]);
+        setSortOptions([]);
     };
 
-    // Get columns not yet used in sorts
-    const unusedColumns = availableColumns.filter((col) => !sorts.some((s) => s.column === col.name));
-
+    // paint
     return (
         <div className="space-y-4">
             {/* Quick Add Sort */}
