@@ -105,18 +105,18 @@ export const FilterComponent = () => {
                         <AccordionContent className="px-3 py-2 text-xs">
                             {/* TABS: BASIC / ADVANCED */}
                             <Tabs defaultValue={col.value?.dataType === 'number' ? 'advanced' : 'basic'} className="w-full">
-                                <TabsList className="grid grid-cols-2 w-40 h-7">
-                                    {/* Show BASIC only when NOT number */}
-                                    {col.value?.dataType !== 'number' && (
+                                {col.value?.dataType !== 'number' && (
+                                    <TabsList className="grid grid-cols-2 w-40 h-7">
+                                        {/* Show BASIC only when NOT number */}
                                         <TabsTrigger value="basic" className="text-xs px-2 py-1 cursor-pointer">
                                             Basic
                                         </TabsTrigger>
-                                    )}
 
-                                    <TabsTrigger value="advanced" className="text-xs px-2 py-1 cursor-pointer">
-                                        {col.value?.dataType !== 'number' ? 'Advanced' : 'Basic'}
-                                    </TabsTrigger>
-                                </TabsList>
+                                        <TabsTrigger value="advanced" className="text-xs px-2 py-1 cursor-pointer">
+                                            Advanced
+                                        </TabsTrigger>
+                                    </TabsList>
+                                )}
 
                                 {/* BASIC FILTERS */}
                                 <TabsContent value="basic" className="mt-3">

@@ -111,8 +111,12 @@ export const TableView = () => {
                                                             <span className="truncate w-full">
                                                                 {value === null || value === undefined ? (
                                                                     <span className="text-muted-foreground italic">null</span>
-                                                                ) : typeof value === 'number' && Math.abs(value) >= 10000 && formatValues ? (
-                                                                    millify(value, { precision: 2 })
+                                                                ) : typeof value === 'number' ? (
+                                                                    formatValues && Math.abs(value) >= 10000 ? (
+                                                                        millify(value, { precision: 2 })
+                                                                    ) : (
+                                                                        value.toFixed(2)
+                                                                    )
                                                                 ) : (
                                                                     String(value)
                                                                 )}
