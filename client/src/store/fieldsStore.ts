@@ -110,6 +110,10 @@ interface IRootState {
     setUIOptions: (options: Partial<IUIOptions>) => void;
     loadingProgress: number;
     setLoadingProgress: (p: number) => void;
+    streamingDone: boolean;
+    setStreamingDone: (done: boolean) => void;
+    isStreaming: boolean;
+    setisStreaming: (streaming: boolean) => void;
 }
 
 const initialState = {
@@ -142,6 +146,8 @@ const initialState = {
         formatValues: true,
     } as IUIOptions,
     loadingProgress: 0,
+    streamingDone: false,
+    isStreaming: false,
 };
 
 export const useStore = create<IRootState>()(
@@ -208,7 +214,8 @@ export const useStore = create<IRootState>()(
 
             // Pivot Actions
             setPivotBuckets: (buckets) => set({ pivotBuckets: buckets }, false, 'setPivotBuckets'),
-
+            setStreamingDone: (done: boolean) => set({ streamingDone: done }, false, 'setStreamingDone'),
+            setisStreaming: (streaming: boolean) => set({ isStreaming: streaming }, false, 'setisStreaming'),
             clearAllAssignments: () =>
                 set(
                     {

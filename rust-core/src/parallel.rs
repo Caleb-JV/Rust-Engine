@@ -9,11 +9,11 @@ use wasm_bindgen::JsValue;
 #[cfg(target_arch = "wasm32")]
 use web_sys::console;
 
-use crate::error::js_err;
+use crate::utils::error::js_err;
 use crate::filters;
 use crate::pivot;
 use crate::sorting;
-use crate::query_types::{FilterCondition, PivotSpec, SortSpec};
+use crate::types::query_types::{FilterCondition, PivotSpec, SortSpec};
 
 /// Threshold for when to use parallel/chunked processing
 /// If batch count is above this, use chunked processing

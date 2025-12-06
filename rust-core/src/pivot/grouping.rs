@@ -5,8 +5,8 @@ use arrow_array::{Array, Float64Array, RecordBatch, StringArray};
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
 use wasm_bindgen::JsValue;
 
-use crate::error::js_err;
-use crate::query_types::{PivotAggregation, PivotSpec};
+use crate::utils::error::js_err;
+use crate::types::query_types::{PivotAggregation, PivotSpec};
 
 use super::aggregation::compute_aggregation;
 

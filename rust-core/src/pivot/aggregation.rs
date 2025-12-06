@@ -2,8 +2,8 @@ use arrow_array::{Array, Float64Array, Int64Array};
 use arrow_schema::DataType;
 use wasm_bindgen::JsValue;
 
-use crate::error::js_err;
-use crate::query_types::PivotAggregation;
+use crate::utils::error::js_err;
+use crate::types::query_types::PivotAggregation;
 
 /// Compute aggregation for a set of row indices over a generic Arrow array.
 /// Dispatches to numeric helpers for Int64/Float64 and supports COUNT for any

@@ -10,8 +10,8 @@ use arrow_arith::boolean as boolean_kernels;
 use arrow_select::filter::filter_record_batch;
 use arrow_string::like;
 
-use crate::error::js_err;
-use crate::query_types::{FilterCondition, FilterOperator, FilterValue};
+use crate::utils::error::js_err;
+use crate::types::query_types::{FilterCondition, FilterOperator, FilterValue};
 
 
 /// Extension helpers for FilterValue so we don't repeat matches everywhere.

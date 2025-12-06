@@ -5,7 +5,7 @@ use wasm_bindgen::JsValue;
 use js_sys::{Object, Reflect, Uint8Array};
 use std::sync::Arc;
 
-use crate::error::{js_err_arrow, js_err};
+use crate::utils::error::{js_err_arrow, js_err};
 
 /// Parse comma-separated column names
 #[allow(dead_code)]
