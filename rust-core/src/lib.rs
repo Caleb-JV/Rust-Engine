@@ -253,7 +253,13 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
     let total_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
     let batch_count = batches.len();
     
-    if use_parallel && multithreading {
+    // Check if there are any operations to perform
+    let has_filters = query.filters.as_ref().map_or(false, |f| !f.is_empty());
+    let has_pivot = query.pivot.as_ref().map_or(false, |p| !p.rows.is_empty() && !p.values.is_empty());
+    let has_sort = query.sort.as_ref().map_or(false, |s| !s.is_empty());
+    let has_operations = has_filters || has_pivot || has_sort;
+    
+    if use_parallel && multithreading && has_operations {
         // Parallel pipeline: split batches and process each chunk independently
         web_sys::console::log_1(&format!(
             "⚡ Using PARALLEL processing for {} batches ({} rows)",
@@ -268,10 +274,20 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
             show_subtotal,
         )?;
     } else {
-        // Sequential pipeline for small datasets
+        // Sequential pipeline for small datasets or when no operations needed
+        let reason = if !has_operations {
+            "no operations"
+        } else if !multithreading {
+            "multithreading disabled"
+        } else if !use_parallel {
+            "dataset too small"
+        } else {
+            "unknown reason"
+        };
+        
         web_sys::console::log_1(&format!(
-            "🐌 Using SEQUENTIAL processing for {} batches ({} rows)",
-            batch_count, total_rows
+            "🐌 Using SEQUENTIAL processing for {} batches ({} rows) - {}",
+            batch_count, total_rows, reason
         ).into());
         
         let seq_start = web_sys::window()
