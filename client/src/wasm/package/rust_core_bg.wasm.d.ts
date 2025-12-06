@@ -1,14 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const generate_sample_data: (a: number, b: bigint) => [number, number, number];
 export const clear_timing_log: () => void;
+export const get_timing_log: () => any;
 export const generate_and_seed_sample_data: (a: number, b: bigint) => [number, number, number];
 export const get_memory_usage: () => number;
-export const get_timing_log: () => any;
 export const seed_chunk: (a: number, b: number, c: number) => [number, number];
 export const seed_finalize: () => [number, number, number];
 export const seed_start: (a: number, b: number) => [number, number];
-export const generate_sample_data: (a: number, b: bigint) => [number, number, number];
 export const get_data_async: (a: number, b: number) => any;
 export const get_filter_options_async: (a: number, b: number) => any;
 export const get_meta_data_async: () => any;

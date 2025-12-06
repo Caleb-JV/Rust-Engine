@@ -27,18 +27,39 @@ trait FilterValueExt {
 
 impl FilterValueExt for FilterValue {
     fn as_i64(&self) -> Result<i64, JsValue> {
-        match self {
-            FilterValue::Number(n) => Ok(*n as i64),
-            _ => Err(js_err("Expected numeric value")),
+    match self {
+        FilterValue::Number(n) => {
+            if n.is_finite() {
+                Ok(*n as i64)
+            } else {
+                Err(js_err("Invalid numeric value"))
+            }
         }
+
+        FilterValue::String(s) => {
+            // Try parsing string into i64
+            s.parse::<i64>()
+                .map_err(|_| js_err("Expected string that can be parsed to integer"))
+        }
+
+        _ => Err(js_err("Expected numeric or numeric-string value")),
     }
+}
+
 
     fn as_f64(&self) -> Result<f64, JsValue> {
-        match self {
-            FilterValue::Number(n) => Ok(*n),
-            _ => Err(js_err("Expected numeric value")),
+    match self {
+        FilterValue::Number(n) => Ok(*n),
+
+        FilterValue::String(s) => {
+            s.parse::<f64>()
+                .map_err(|_| js_err("Expected string that can be parsed to a number"))
         }
+
+        _ => Err(js_err("Expected numeric value")),
     }
+}
+
 
     fn as_str(&self) -> Result<&str, JsValue> {
         match self {

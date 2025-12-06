@@ -1,6 +1,35 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * Generate realistic sample data with 5 million rows
+ * 
+ * Schema:
+ * - id: Integer (1 to row_count)
+ * - customer_name: String (realistic names)
+ * - region: String (North, South, East, West, Central)
+ * - product_category: String (Electronics, Clothing, Food, Furniture, Books, Toys, Sports, Health)
+ * - product_name: String (combinations of category-specific items)
+ * - quantity: Integer (1 to 100)
+ * - unit_price: Float (10.0 to 999.99)
+ * - total_amount: Float (quantity * unit_price)
+ * - discount_percent: Float (0, 5, 10, 15, 20, 25)
+ * - payment_method: String (Credit Card, Debit Card, Cash, PayPal, Crypto)
+ * - is_premium_customer: Boolean
+ * - satisfaction_score: Integer (1 to 5)
+ * - year: Integer (2020-2024)
+ * - quarter: String (Q1, Q2, Q3, Q4)
+ * - month: String (Jan-Dec)
+ */
+export function generate_sample_data(row_count: number, seed: bigint): any;
+/**
+ * Get all timing log entries
+ */
+export function get_timing_log(): any;
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log(): void;
+/**
  * ------------------------------------------------------------------
  *   STREAMING API: Initialize with CSV header to infer schema
  * ------------------------------------------------------------------
@@ -31,14 +60,6 @@ export function get_memory_usage(): number;
  */
 export function seed_finalize(): number;
 /**
- * Get all timing log entries
- */
-export function get_timing_log(): any;
-/**
- * Clear the timing log
- */
-export function clear_timing_log(): void;
-/**
  * Async version of get_data with a structured response envelope
  * Returns { columns: [...], rowCount: number } instead of IPC bytes
  */
@@ -55,40 +76,19 @@ export function get_meta_data_async(): Promise<any>;
  * Async WASM export: seed data and return a structured response with timing
  */
 export function seed_async(bytes: Uint8Array): Promise<any>;
-/**
- * Generate realistic sample data with 5 million rows
- * 
- * Schema:
- * - id: Integer (1 to row_count)
- * - customer_name: String (realistic names)
- * - region: String (North, South, East, West, Central)
- * - product_category: String (Electronics, Clothing, Food, Furniture, Books, Toys, Sports, Health)
- * - product_name: String (combinations of category-specific items)
- * - quantity: Integer (1 to 100)
- * - unit_price: Float (10.0 to 999.99)
- * - total_amount: Float (quantity * unit_price)
- * - discount_percent: Float (0, 5, 10, 15, 20, 25)
- * - payment_method: String (Credit Card, Debit Card, Cash, PayPal, Crypto)
- * - is_premium_customer: Boolean
- * - satisfaction_score: Integer (1 to 5)
- * - year: Integer (2020-2024)
- * - quarter: String (Q1, Q2, Q3, Q4)
- * - month: String (Jan-Dec)
- */
-export function generate_sample_data(row_count: number, seed: bigint): any;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
   readonly clear_timing_log: () => void;
+  readonly get_timing_log: () => any;
   readonly generate_and_seed_sample_data: (a: number, b: bigint) => [number, number, number];
   readonly get_memory_usage: () => number;
-  readonly get_timing_log: () => any;
   readonly seed_chunk: (a: number, b: number, c: number) => [number, number];
   readonly seed_finalize: () => [number, number, number];
   readonly seed_start: (a: number, b: number) => [number, number];
-  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
   readonly get_data_async: (a: number, b: number) => any;
   readonly get_filter_options_async: (a: number, b: number) => any;
   readonly get_meta_data_async: () => any;

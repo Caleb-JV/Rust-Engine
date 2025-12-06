@@ -1,89 +1,94 @@
-import { Code2, Cpu } from 'lucide-react';
-
 export function DataToWasmAnimation({ active, progress }: { active: boolean; progress: number }) {
-    const packets = Array.from({ length: 16 });
+    // Subtle random packet widths and stagger
+    const packets = Array.from({ length: 14 }).map(() => ({
+        w: 2 + Math.random() * 3,
+        d: Math.random() * 0.4, // random delay offset
+    }));
 
-    const speed = 1.3 - Math.min(progress / 100, 0.8);
+    const speed = 1.2 - (progress / 100) * 0.7; // 1.2s → 0.5s
 
     return (
-        <div className="w-full flex justify-center items-center py-10">
-            <div className="relative flex items-center justify-between gap-10 rounded-3xl border bg-background/80 px-10 py-8 shadow-lg backdrop-blur-xl max-w-4xl w-full">
-                {/* JS Panel */}
-                <div className="flex flex-col items-start gap-2">
-                    <div className="inline-flex items-center gap-2 border px-4 py-2 rounded-xl text-sm bg-muted/20 shadow-sm">
-                        <Code2 className="h-5 w-5" />
-                        <span className="font-medium">JavaScript</span>
+        <div className="w-full flex items-center justify-center py-6">
+            <div className="flex items-center gap-10">
+                {/* DATA */}
+                <div className="flex flex-col items-center">
+                    <div className="h-10 w-10 rounded-md border border-gray-300 bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-700">
+                        JS
                     </div>
-                    <span className="text-xs text-muted-foreground">Query • Filters • Sort</span>
+                    <span className="text-[10px] text-gray-500 mt-1">Source(file)</span>
                 </div>
 
-                {/* Flow Zone */}
-                <div className="relative flex-1 h-24 mx-4">
-                    {/* Glow Background */}
-                    <div className="absolute inset-0 blur-xl opacity-50 bg-linear-to-r from-primary/10 via-primary/30 to-primary/10 rounded-full" />
-
-                    {/* Main Line */}
-                    <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-linear-to-r from-border via-primary/50 to-border rounded-full" />
+                {/* PACKET STREAM */}
+                <div className="relative w-72 h-10 overflow-hidden">
+                    {/* line */}
+                    <div className="absolute top-1/2 left-0 right-0 h-[px -translate-y-1/2 bg-linear-to-r from-gray-300 via-gray-400 to-gray-300" />
 
                     {/* Packets */}
-                    {active &&
-                        packets.map((_, i) => (
-                            <div
-                                key={i}
-                                className="packet"
-                                style={{
-                                    animationDelay: `${i * 0.18}s`,
-                                    animationDuration: `${speed}s`,
-                                }}
-                            />
-                        ))}
-
-                    {/* Arrow */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                        <div className="h-0 w-0 border-y-[9px] border-l-14 border-y-transparent border-l-primary/60" />
-                    </div>
+                    {packets.map((p, i) => (
+                        <span
+                            key={i}
+                            className="data-packet absolute top-1/2 -translate-y-1/2 rounded-sm bg-gray-600"
+                            style={
+                                {
+                                    width: `${p.w * 1.2}px`,
+                                    height: '6px',
+                                    '--i': i,
+                                    '--d': p.d,
+                                    '--speed': `${speed}s`,
+                                    animationPlayState: active ? 'running' : 'paused',
+                                } as React.CSSProperties & { '--i': number; '--d': number; '--speed': string }
+                            }
+                        />
+                    ))}
                 </div>
 
-                {/* WASM Panel */}
-                <div className="flex flex-col items-end gap-2">
-                    <div className="inline-flex items-center gap-2 border px-4 py-2 rounded-xl text-sm bg-muted/20 shadow-sm">
-                        <Cpu className="h-5 w-5" />
-                        <span className="font-medium">WASM Engine</span>
+                {/* WASM */}
+                <div
+                    className="flex flex-col items-center transition-transform duration-200"
+                    style={{
+                        transform: active ? `scale(${1 + progress * 0.0008})` : 'scale(1)',
+                    }}
+                >
+                    <div className="h-10 w-10 rounded-md border border-gray-300 bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-700">
+                        WASM
                     </div>
-                    <span className="text-xs text-muted-foreground">Arrow • Pivot • Agg</span>
+                    <span className="text-[10px] text-gray-500 mt-1">{Math.round(progress)}%</span>
                 </div>
-
-                {/* Status */}
-                <div className="absolute bottom-4 text-xs text-muted-foreground">{active ? `Streaming… ${progress}%` : 'Idle'}</div>
             </div>
 
-            <style>{`
-                .packet {
-                    position: absolute;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    width: 14px;
-                    height: 14px;
-                    background: hsl(var(--primary));
-                    border-radius: 9999px;
-                    opacity: 0.95;
-                    filter: drop-shadow(0 0 10px hsl(var(--primary) / 0.8));
-                    animation-name: flow;
-                    animation-timing-function: linear;
-                    animation-iteration-count: infinite;
+            <style
+                dangerouslySetInnerHTML={{
+                    __html: `
+                .data-packet {
+                    left: -20px;
+                    opacity: 0;
+                    animation: movePacket var(--speed) ease-in-out infinite;
+                    animation-delay: calc(var(--i) * -0.22s - var(--d) * 0.4s);
                 }
 
-                @keyframes flow {
-                    from {
-                        left: -8%;
-                        transform: translateY(-50%) scale(0.9);
+                @keyframes movePacket {
+                    0% {
+                        opacity: 0;
+                        transform: translate3d(0, -50%, 0) scale(0.9);
                     }
-                    to {
-                        left: 105%;
-                        transform: translateY(-50%) scale(1.1);
+                    10% {
+                        opacity: 0.7;
+                    }
+                    50% {
+                        opacity: 0.9;
+                        transform: translate3d(50%, -50%, 0) scale(1);
+                    }
+                    90% {
+                        opacity: 0.7;
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translate3d(300px, -50%, 0) scale(0.85);
                     }
                 }
-            `}</style>
+            `,
+                }}
+            />
         </div>
     );
 }
