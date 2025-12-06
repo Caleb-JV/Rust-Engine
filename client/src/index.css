@@ -119,30 +119,3 @@
         overflow: hidden;
     }
 }
-
-/* @import 'tailwindcss/preflight'; */
-@tailwind utilities;
-
-@layer utilities {
-    @keyframes packet-fly {
-        0% {
-            transform: translateX(0) translateY(var(--y-offset));
-            opacity: 0;
-        }
-        20% {
-            opacity: 1;
-        }
-        80% {
-            opacity: 1;
-        }
-        100% {
-            transform: translateX(220px) translateY(0px);
-            opacity: 0;
-        }
-    }
-
-    .packet {
-        @apply absolute h-2 w-2 rounded-sm bg-blue-500 shadow-md;
-        animation: packet-fly 1.4s linear infinite;
-    }
-}
