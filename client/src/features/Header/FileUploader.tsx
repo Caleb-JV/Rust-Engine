@@ -69,8 +69,6 @@ export default function FileUploader() {
 
             // Trigger metadata refresh
             await dataService.refreshMetadata();
-
-            useAppStore.getState().setProcessingStatus('success');
         } catch (error) {
             console.error('Failed to generate sample data:', error);
             useAppStore.getState().setProcessingStatus('error');
