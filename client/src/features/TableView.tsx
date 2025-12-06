@@ -50,7 +50,7 @@ export const TableView = () => {
                 </p>
             </CardHeader>
 
-            <Card className="h-full flex flex-col rounded-sm shadow-none overflow-y-scroll">
+            <Card className="h-full flex flex-col rounded-sm shadow-none overflow-y-auto">
                 <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
                     {/* Single scroll container for both vertical & horizontal */}
                     <div ref={parentRef} className="flex-1 overflow-auto">
@@ -111,15 +111,9 @@ export const TableView = () => {
                                                             <span className="truncate w-full">
                                                                 {value === null || value === undefined ? (
                                                                     <span className="text-muted-foreground italic">null</span>
-                                                                ) : typeof value === 'number' ? (
-                                                                    // Numeric branch
-                                                                    formatValues && Math.abs(value) >= 10000 ? (
-                                                                        millify(value, { precision: 2 })
-                                                                    ) : (
-                                                                        value.toFixed(0)
-                                                                    )
+                                                                ) : typeof value === 'number' && Math.abs(value) >= 10000 && formatValues ? (
+                                                                    millify(value, { precision: 2 })
                                                                 ) : (
-                                                                    // Non-number fallback
                                                                     String(value)
                                                                 )}
                                                             </span>
