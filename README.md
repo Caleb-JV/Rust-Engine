@@ -1,10 +1,10 @@
-# 🦀⚛️ Rust Engine - High-Performance Data Analytics Platform
+# 🦀⚛️ Blaze Engine - High-Performance Data Analytics Platform
 
 A production-grade data analytics application leveraging Rust + WebAssembly for blazing-fast data processing in the browser. Built for handling large datasets with advanced filtering, sorting, pivoting, and aggregation capabilities.
 
-## 🚀 [Live Demo](https://rust-wasm-react-hackathon-qe5ek4r8d-thayalangrs-projects.vercel.app)
+## 🚀 [Live Demo](https://blaze-engine.vercel.app/)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/pradeep-kalyan/Rust-Engine)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Caleb-JV/Rust-Engine)
 
 ## ✨ Key Features
 
@@ -597,9 +597,8 @@ Copyright (c) 2025 Rust + WebAssembly + React Hackathon Boilerplate
 
 ## 🔗 Links & Resources
 
-- **Live Demo**: [rust-wasm-react-hackathon.vercel.app](https://rust-wasm-react-hackathon-qe5ek4r8d-thayalangrs-projects.vercel.app)
-- **Repository**: [github.com/pradeep-kalyan/Rust-Engine](https://github.com/pradeep-kalyan/Rust-Engine)
-- **Issues**: [github.com/pradeep-kalyan/Rust-Engine/issues](https://github.com/pradeep-kalyan/Rust-Engine/issues)
+- **Live Demo**: [blaze-engine.vercel.app](https://blaze-engine.vercel.app/)
+- **Repository**: [github.com/Caleb-JV/Rust-Engine)](https://github.com/Caleb-JV/Rust-Engine)
 - **API Documentation**: [rust-core/API_DOCUMENTATION.md](rust-core/API_DOCUMENTATION.md)
 
 ### Learn More
