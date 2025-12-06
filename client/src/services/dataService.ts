@@ -383,7 +383,7 @@ class DataService {
         const { filterCondition, pivotBuckets, additionalOptions, sortOptions } = useAppStore.getState();
 
         const query: DataQuery = {
-            filters: filterCondition,
+            filters: filterCondition.filter((fc) => fc && !!fc?.value),
             pivot: getPivotItemsToFetchData(pivotBuckets),
             sort: sortOptions,
             options: additionalOptions,
