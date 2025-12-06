@@ -50,7 +50,7 @@ export const TableView = () => {
                 </p>
             </CardHeader>
 
-            <Card className="h-full flex flex-col rounded-sm shadow-none overflow-y-auto">
+            <Card className="h-full flex flex-col rounded-sm shadow-none overflow-hidden">
                 <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
                     {/* Single scroll container for both vertical & horizontal */}
                     <div ref={parentRef} className="flex-1 overflow-auto">

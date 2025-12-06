@@ -34,9 +34,6 @@ export const ProcessingIndicator = () => {
                     />
                 </div>
             </div>
-
-            {/* Tooltip explaining the smooth animation */}
-            <div className="mt-2 text-xs text-center text-muted-foreground">✨ Smooth rotation = No UI freezes</div>
         </div>
     );
 };
