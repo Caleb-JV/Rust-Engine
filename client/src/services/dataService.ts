@@ -632,7 +632,7 @@ class DataService {
             }
 
             const metaTiming: TimingLog = {
-                operation: 'Analyzing Generated Data',
+                operation: 'fetching Data',
                 duration_ms: metadataResponse.timeTaken,
             };
             store.setLatestTiming(metaTiming);
