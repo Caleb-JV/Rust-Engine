@@ -7,7 +7,6 @@ import init, {
     get_meta_data_async,
     get_data_async,
     get_filter_options_async,
-    get_processed_data_async,
     // NEW streaming + timing exports
     seed_start,
     seed_chunk,
@@ -135,17 +134,13 @@ const handleGetMetaData = async (): Promise<IResponse<string>> => {
     return (await get_meta_data_async()) as IResponse<string>;
 };
 
-const handleGetData = async (queryJson: string): Promise<IResponse<any>> => {
+const handleGetData = async (queryJson: string): Promise<IResponse<{ columns: unknown[]; rowCount: number }>> => {
     // Returns { columns: ArrowColumnBuffer[], rowCount: number }
-    return (await get_data_async(queryJson)) as IResponse<any>;
+    return (await get_data_async(queryJson)) as IResponse<{ columns: unknown[]; rowCount: number }>;
 };
 
 const handleGetFilterOptions = async (column: string): Promise<IResponse<string>> => {
     return (await get_filter_options_async(column)) as IResponse<string>;
-};
-
-const handleProcessData = async (data: string, pivot: string, aggregationMap: string): Promise<IResponse<string>> => {
-    return (await get_processed_data_async(data, pivot, aggregationMap)) as IResponse<string>;
 };
 
 const handleGetMemoryUsage = (): IResponse<number> => {
@@ -205,11 +200,6 @@ const handleMessage = async (message: WorkerMessage<WorkerRequest>): Promise<Wor
 
             case REQUEST_TYPE.GET_FILTER_OPTIONS: {
                 const response = await handleGetFilterOptions(payload.payload.column);
-                return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
-            }
-
-            case REQUEST_TYPE.GET_PROCESSED_DATA: {
-                const response = await handleProcessData(payload.payload.data, payload.payload.pivot, payload.payload.aggregationMap);
                 return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
             }
 

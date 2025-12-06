@@ -18,7 +18,6 @@ export const REQUEST_TYPE = {
     GET_META_DATA: 'GET_META_DATA',
     GET_DATA: 'GET_DATA',
     GET_FILTER_OPTIONS: 'GET_FILTER_OPTIONS',
-    GET_PROCESSED_DATA: 'GET_PROCESSED_DATA',
     // NEW (streaming)
     PROCESS_FILE: 'PROCESS_FILE',
     // Memory usage
@@ -44,8 +43,6 @@ export const RESPONSE_TYPE = {
 
     GET_FILTER_OPTIONS_SUCCESS: 'GET_FILTER_OPTIONS_SUCCESS',
     GET_FILTER_OPTIONS_ERROR: 'GET_FILTER_OPTIONS_ERROR',
-    GET_PROCESSED_DATA_SUCCESS: 'GET_PROCESSED_DATA_SUCCESS',
-    GET_PROCESSED_DATA_ERROR: 'GET_PROCESSED_DATA_ERROR',
 
     // NEW (streaming)
     PROCESS_FILE_PROGRESS: 'PROCESS_FILE_PROGRESS',
@@ -84,7 +81,7 @@ export interface IProcessFileProgress {
 // NEW — final streaming result
 export interface IProcessFileResult {
     metadataJson: string;
-    timing: any[];
+    timing: string[];
 }
 
 // ============================================================================
@@ -97,7 +94,6 @@ export type WorkerRequest =
     | { type: typeof REQUEST_TYPE.GET_META_DATA }
     | { type: typeof REQUEST_TYPE.GET_DATA; payload: { queryJson: string } }
     | { type: typeof REQUEST_TYPE.GET_FILTER_OPTIONS; payload: { column: string } }
-    | { type: typeof REQUEST_TYPE.GET_PROCESSED_DATA; payload: { data: string; pivot: string; aggregationMap: string } }
     // NEW streaming large file input
     | { type: typeof REQUEST_TYPE.PROCESS_FILE; payload: { file: File } }
     // Memory usage
@@ -116,11 +112,10 @@ export type WorkerResponse =
     | { type: typeof RESPONSE_TYPE.SEED_ERROR; error: string }
     | { type: typeof RESPONSE_TYPE.GET_META_DATA_SUCCESS; response: IResponse<string> }
     | { type: typeof RESPONSE_TYPE.GET_META_DATA_ERROR; error: string }
-    | { type: typeof RESPONSE_TYPE.GET_DATA_SUCCESS; response: IResponse<Uint8Array> }
+    | { type: typeof RESPONSE_TYPE.GET_DATA_SUCCESS; response: IResponse<{ columns: unknown[]; rowCount: number }> }
     | { type: typeof RESPONSE_TYPE.GET_DATA_ERROR; error: string }
     | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS; response: IResponse<string> }
     | { type: typeof RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR; error: string }
-    | { type: typeof RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR; error: string }
     // NEW streaming: progress + final + error
     | { type: typeof RESPONSE_TYPE.PROCESS_FILE_PROGRESS; data: IProcessFileProgress }
     | { type: typeof RESPONSE_TYPE.PROCESS_FILE_SUCCESS; response: IResponse<IProcessFileResult> }
@@ -152,19 +147,17 @@ export type ExtractResponseType<T extends WorkerRequest['type']> = T extends typ
       : T extends typeof REQUEST_TYPE.GET_META_DATA
         ? IResponse<string>
         : T extends typeof REQUEST_TYPE.GET_DATA
-          ? IResponse<Uint8Array>
+          ? IResponse<{ columns: unknown[]; rowCount: number }>
           : T extends typeof REQUEST_TYPE.GET_FILTER_OPTIONS
             ? IResponse<string>
-            : T extends typeof REQUEST_TYPE.GET_PROCESSED_DATA
-              ? IResponse<string>
-              : T extends typeof REQUEST_TYPE.PROCESS_FILE
-                ? IResponse<IProcessFileResult>
-                : never;
+            : T extends typeof REQUEST_TYPE.PROCESS_FILE
+              ? IResponse<IProcessFileResult>
+              : never;
 
-export interface IPendingRequest<T = any> {
+export interface IPendingRequest<T = unknown> {
     resolve: (value: T) => void;
     reject: (error: Error) => void;
-    onProgress?: (data: any) => void; // NEW — progress callback support
+    onProgress?: (data: IProcessFileProgress) => void; // NEW — progress callback support
 }
 
 // ============================================================================
@@ -184,10 +177,10 @@ export function getSuccessResponseType(requestType: WorkerRequestType): WorkerRe
         [REQUEST_TYPE.GET_META_DATA]: RESPONSE_TYPE.GET_META_DATA_SUCCESS,
         [REQUEST_TYPE.GET_DATA]: RESPONSE_TYPE.GET_DATA_SUCCESS,
         [REQUEST_TYPE.GET_FILTER_OPTIONS]: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS,
-        [REQUEST_TYPE.GET_PROCESSED_DATA]: RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS,
         // NEW
         [REQUEST_TYPE.PROCESS_FILE]: RESPONSE_TYPE.PROCESS_FILE_SUCCESS,
         [REQUEST_TYPE.GET_MEMORY_USAGE]: RESPONSE_TYPE.GET_MEMORY_USAGE_SUCCESS,
+        [REQUEST_TYPE.GENERATE_SAMPLE_DATA]: RESPONSE_TYPE.GENERATE_SAMPLE_DATA_SUCCESS,
     };
     return mapping[requestType];
 }
@@ -200,7 +193,6 @@ export function getErrorResponseType(requestType: WorkerRequestType): WorkerResp
         [REQUEST_TYPE.GET_META_DATA]: RESPONSE_TYPE.GET_META_DATA_ERROR,
         [REQUEST_TYPE.GET_DATA]: RESPONSE_TYPE.GET_DATA_ERROR,
         [REQUEST_TYPE.GET_FILTER_OPTIONS]: RESPONSE_TYPE.GET_FILTER_OPTIONS_ERROR,
-        [REQUEST_TYPE.GET_PROCESSED_DATA]: RESPONSE_TYPE.GET_PROCESSED_DATA_ERROR,
         // NEW
         [REQUEST_TYPE.PROCESS_FILE]: RESPONSE_TYPE.PROCESS_FILE_ERROR,
         [REQUEST_TYPE.GET_MEMORY_USAGE]: RESPONSE_TYPE.GET_MEMORY_USAGE_ERROR,
@@ -217,7 +209,6 @@ export function isSuccessResponse(type: WorkerResponseType): boolean {
         type === RESPONSE_TYPE.GET_META_DATA_SUCCESS ||
         type === RESPONSE_TYPE.GET_DATA_SUCCESS ||
         type === RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS ||
-        type === RESPONSE_TYPE.GET_PROCESSED_DATA_SUCCESS ||
         // NEW
         type === RESPONSE_TYPE.PROCESS_FILE_SUCCESS ||
         type === RESPONSE_TYPE.GET_MEMORY_USAGE_SUCCESS ||

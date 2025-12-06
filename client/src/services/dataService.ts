@@ -288,6 +288,8 @@ class DataService {
             if (useStreaming) {
                 // 2a. Use streaming API with progress updates
                 console.log(`[DataService] Using streaming mode for file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+                store.setisStreaming(true);
+                store.setLoadingProgress?.(0);
 
                 const result = await this.workerClient.processFile(file, (progress) => {
                     console.log(`[DataService] Progress: ${progress.percent}%`);
@@ -311,6 +313,8 @@ class DataService {
                     duration_ms: result.timeTaken || 0,
                 };
                 store.setLatestTiming(seedTiming);
+                store.setisStreaming(false);
+                store.setLoadingProgress?.(100);
             } else {
                 // 2b. Small file: Use traditional seed method (faster for small files)
                 console.log(`[DataService] Using direct mode for file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
@@ -439,16 +443,6 @@ class DataService {
                         );
                     }
                 }
-                const stringifiedRows = JSON.stringify(this.resultSchema, (_, value) =>
-                    typeof value === 'bigint'
-                        ? value.toString() // Convert BigInt to string
-                        : value,
-                );
-                const stringifiedPivot = JSON.stringify(['Tags']);
-                const stringifiedAggregationMap = JSON.stringify({ Parent: 'sum' });
-                this.resultSchema = JSON.parse(
-                    (await this.workerClient.getProcessedData(stringifiedRows, stringifiedPivot, stringifiedAggregationMap)).data,
-                );
                 const reconstructTime = performance.now() - reconstructStart;
                 const totalMainThreadTime = performance.now() - mainThreadStart;
 
@@ -508,7 +502,7 @@ class DataService {
     /**
      * Get cell value by row and column (zero-copy columnar access)
      */
-    getCell(rowIndex: number, columnName: string): any {
+    getCell(rowIndex: number, columnName: string): unknown {
         const vector = this.resultColumns.get(columnName);
         if (!vector) return null;
 

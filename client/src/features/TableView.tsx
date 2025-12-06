@@ -5,11 +5,14 @@ import { useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { millify } from 'millify';
 import FileUploader from './Header/FileUploader';
+import { DataToWasmAnimation } from '@/components/dataToWasm';
 
 export const TableView = () => {
     const processingStatus = useStore(selectProcessingStatus);
     const tableRenderCounter = useStore((state) => state.tableRenderCounter);
     const { formatValues } = useStore(selectUIOptions);
+    const isStreaming = useStore((state) => state.isStreaming);
+    const loadingProgress = useStore(selectLoadingProgress);
 
     const parentRef = useRef<HTMLDivElement | null>(null);
     const headerRowRef = useRef<HTMLDivElement | null>(null);
@@ -34,6 +37,9 @@ export const TableView = () => {
 
     // paint
     if (processingStatus === 'idle') return <FileUploader />;
+    if (isStreaming) {
+        return <DataToWasmAnimation active={true} progress={loadingProgress} />;
+    }
 
     return (
         <div className="grid grid-rows-[auto_1fr] overflow-hidden p-4 h-full pt-2">

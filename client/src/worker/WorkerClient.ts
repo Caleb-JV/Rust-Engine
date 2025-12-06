@@ -14,17 +14,12 @@ import type {
 } from './types';
 import { REQUEST_TYPE, RESPONSE_TYPE, createRequestId, isSuccessResponse, isErrorResponse, isProgressResponse } from './types';
 
-// Extend pending request type to include onProgress
-type PendingRequest = IPendingRequest & {
-    onProgress?: (data: any) => void;
-};
-
 // ============================================================================
 // Worker Client
 // ============================================================================
 export class WorkerClient {
     private worker: Worker;
-    private pendingRequests = new Map<string, PendingRequest>();
+    private pendingRequests = new Map<string, IPendingRequest>();
     private requestIdCounter = 0;
 
     constructor() {
@@ -46,7 +41,7 @@ export class WorkerClient {
         request: WorkerRequest,
         options?: {
             transferables?: Transferable[];
-            onProgress?: (data: any) => void;
+            onProgress?: (data: IProcessFileProgress) => void;
         },
     ): Promise<ExtractResponseType<T>> {
         const id = this.generateRequestId();
@@ -57,7 +52,11 @@ export class WorkerClient {
         };
 
         const promise = new Promise<ExtractResponseType<T>>((resolve, reject) => {
-            this.pendingRequests.set(id, { resolve, reject, onProgress: options?.onProgress });
+            this.pendingRequests.set(id, {
+                resolve: resolve as (value: unknown) => void,
+                reject,
+                onProgress: options?.onProgress,
+            });
         });
 
         this.worker.postMessage(message, options?.transferables || []);
@@ -88,9 +87,9 @@ export class WorkerClient {
 
         if (isSuccessResponse(payload.type)) {
             if (payload.type === RESPONSE_TYPE.INIT_SUCCESS) {
-                pending.resolve(undefined as any);
+                pending.resolve(undefined as never);
             } else if ('response' in payload) {
-                pending.resolve(payload.response as any);
+                pending.resolve(payload.response as never);
             }
         } else if (isErrorResponse(payload.type)) {
             if ('error' in payload) {
@@ -131,7 +130,7 @@ export class WorkerClient {
         });
     }
 
-    async getData(queryJson: string): Promise<IResponse<Uint8Array>> {
+    async getData(queryJson: string): Promise<IResponse<{ columns: unknown[]; rowCount: number }>> {
         return this.sendRequest<typeof REQUEST_TYPE.GET_DATA>({
             type: REQUEST_TYPE.GET_DATA,
             payload: { queryJson },
@@ -142,16 +141,6 @@ export class WorkerClient {
         return this.sendRequest<typeof REQUEST_TYPE.GET_FILTER_OPTIONS>({
             type: REQUEST_TYPE.GET_FILTER_OPTIONS,
             payload: { column },
-        });
-    }
-
-    /**
-     * Get data with query
-     */
-    async getProcessedData(data: string, pivot: string, aggregationMap: string): Promise<IResponse<string>> {
-        return this.sendRequest<typeof REQUEST_TYPE.GET_PROCESSED_DATA>({
-            type: REQUEST_TYPE.GET_PROCESSED_DATA,
-            payload: { data, pivot, aggregationMap },
         });
     }
 

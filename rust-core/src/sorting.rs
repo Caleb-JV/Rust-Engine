@@ -2,8 +2,8 @@ use arrow_array::RecordBatch;
 use arrow_ord::sort::{SortColumn, SortOptions};
 use wasm_bindgen::JsValue;
 
-use crate::error::js_err;
-use crate::query_types::{SortDirection, SortSpec};
+use crate::utils::error::js_err;
+use crate::types::query_types::{SortDirection, SortSpec};
 
 /// Apply sorting to record batches
 pub fn apply_sorting(

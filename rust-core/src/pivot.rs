@@ -4,8 +4,8 @@ pub mod grouping;
 use arrow_array::RecordBatch;
 use wasm_bindgen::JsValue;
 
-use crate::error::js_err;
-use crate::query_types::PivotSpec;
+use crate::utils::error::js_err;
+use crate::types::query_types::PivotSpec;
 
 use grouping::group_and_aggregate;
 

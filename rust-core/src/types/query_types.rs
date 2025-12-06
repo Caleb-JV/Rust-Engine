@@ -112,3 +112,14 @@ pub struct DataQuery {
     pub offset: Option<usize>,
     pub options: Option<AdditionalOptions>,
 }
+
+
+/// Supported aggregation types
+#[allow(dead_code)]
+pub enum AggregationType {
+    Sum,
+    Average,
+    Count,
+    Max,
+    Min,
+}

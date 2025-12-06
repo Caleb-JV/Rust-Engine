@@ -7,23 +7,21 @@ use wasm_bindgen::JsValue;
 
 // Module declarations
 mod api;
-mod data_generator;
-mod error;
+#[path = "dataHelpers/mod.rs"]
+mod data_helpers;
 mod filters;
-mod helpers;
 mod operations;
 mod parallel;
 mod pivot;
-mod query_types;
 mod sorting;
 mod storage;
-mod timing;
 mod types;
+mod utils;
 
 // Imports from modules
-use error::{js_err, js_err_arrow};
-use helpers::{to_simple_type, combine_batches, extract_column_buffers};
-use query_types::DataQuery;
+use utils::error::{js_err, js_err_arrow};
+use data_helpers::helpers::{to_simple_type, combine_batches, extract_column_buffers};
+use types::query_types::DataQuery;
 use storage::{STORED_BATCHES, STORED_SCHEMA};
 
 // Re-export async WASM API
@@ -31,12 +29,11 @@ pub use api::{
     get_data_async,
     get_filter_options_async,
     get_meta_data_async,
-    seed_async,
-    get_processed_data_async
+    seed_async
 };
 
 // Re-export data generator
-pub use data_generator::generate_sample_data;
+pub use utils::data_generator::generate_sample_data;
 
 // Re-export streaming seed functions
 use wasm_bindgen::prelude::*;
@@ -118,7 +115,7 @@ pub fn get_memory_usage() -> usize {
 /// ------------------------------------------------------------------
 #[wasm_bindgen]
 pub fn generate_and_seed_sample_data(row_count: usize, seed: u64) -> Result<usize, JsValue> {
-    let batch = data_generator::generate_sample_batch(row_count, seed)
+    let batch = utils::data_generator::generate_sample_batch(row_count, seed)
         .map_err(|e| js_err(&e))?;
 
     let schema = batch.schema();
@@ -446,8 +443,4 @@ fn apply_limit_offset(
 
 pub(crate) fn get_filter_options(col_name: &str) -> Result<JsValue, JsValue> {
 	operations::get_filter_options(col_name)
-}
-
-pub(crate) fn get_processed_data(data: &str,pivot:&str,aggregation_map:&str) -> Result<JsValue, JsValue> {
-	operations::get_processed_data(data,pivot,aggregation_map)
 }

@@ -1,35 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Generate realistic sample data with 5 million rows
- * 
- * Schema:
- * - id: Integer (1 to row_count)
- * - customer_name: String (realistic names)
- * - region: String (North, South, East, West, Central)
- * - product_category: String (Electronics, Clothing, Food, Furniture, Books, Toys, Sports, Health)
- * - product_name: String (combinations of category-specific items)
- * - quantity: Integer (1 to 100)
- * - unit_price: Float (10.0 to 999.99)
- * - total_amount: Float (quantity * unit_price)
- * - discount_percent: Float (0, 5, 10, 15, 20, 25)
- * - payment_method: String (Credit Card, Debit Card, Cash, PayPal, Crypto)
- * - is_premium_customer: Boolean
- * - satisfaction_score: Integer (1 to 5)
- * - year: Integer (2020-2024)
- * - quarter: String (Q1, Q2, Q3, Q4)
- * - month: String (Jan-Dec)
- */
-export function generate_sample_data(row_count: number, seed: bigint): any;
-/**
- * Get all timing log entries
- */
-export function get_timing_log(): any;
-/**
- * Clear the timing log
- */
-export function clear_timing_log(): void;
-/**
  * ------------------------------------------------------------------
  *   Get current memory usage in bytes
  * ------------------------------------------------------------------
@@ -60,13 +31,17 @@ export function seed_finalize(): number;
  */
 export function seed_start(header_bytes: Uint8Array): void;
 /**
+ * Clear the timing log
+ */
+export function clear_timing_log(): void;
+/**
+ * Get all timing log entries
+ */
+export function get_timing_log(): any;
+/**
  * Async version of get_filter_options with a structured response envelope
  */
 export function get_filter_options_async(col_name: string): Promise<any>;
-/**
- * Async version of get_processed_data with a structured response envelope
- */
-export function get_processed_data_async(data: string, pivot: string, aggregation_map: string): Promise<any>;
 /**
  * Async WASM export: seed data and return a structured response with timing
  */
@@ -80,24 +55,44 @@ export function get_meta_data_async(): Promise<any>;
  * Returns { columns: [...], rowCount: number } instead of IPC bytes
  */
 export function get_data_async(query_json: string): Promise<any>;
+/**
+ * Generate realistic sample data with 5 million rows
+ * 
+ * Schema:
+ * - id: Integer (1 to row_count)
+ * - customer_name: String (realistic names)
+ * - region: String (North, South, East, West, Central)
+ * - product_category: String (Electronics, Clothing, Food, Furniture, Books, Toys, Sports, Health)
+ * - product_name: String (combinations of category-specific items)
+ * - quantity: Integer (1 to 100)
+ * - unit_price: Float (10.0 to 999.99)
+ * - total_amount: Float (quantity * unit_price)
+ * - discount_percent: Float (0, 5, 10, 15, 20, 25)
+ * - payment_method: String (Credit Card, Debit Card, Cash, PayPal, Crypto)
+ * - is_premium_customer: Boolean
+ * - satisfaction_score: Integer (1 to 5)
+ * - year: Integer (2020-2024)
+ * - quarter: String (Q1, Q2, Q3, Q4)
+ * - month: String (Jan-Dec)
+ */
+export function generate_sample_data(row_count: number, seed: bigint): any;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly clear_timing_log: () => void;
-  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
-  readonly get_timing_log: () => any;
   readonly generate_and_seed_sample_data: (a: number, b: bigint) => [number, number, number];
-  readonly get_data_async: (a: number, b: number) => any;
-  readonly get_filter_options_async: (a: number, b: number) => any;
   readonly get_memory_usage: () => number;
-  readonly get_meta_data_async: () => any;
-  readonly get_processed_data_async: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
-  readonly seed_async: (a: number, b: number) => any;
+  readonly get_timing_log: () => any;
   readonly seed_chunk: (a: number, b: number, c: number) => [number, number];
   readonly seed_finalize: () => [number, number, number];
   readonly seed_start: (a: number, b: number) => [number, number];
+  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
+  readonly get_data_async: (a: number, b: number) => any;
+  readonly get_filter_options_async: (a: number, b: number) => any;
+  readonly get_meta_data_async: () => any;
+  readonly seed_async: (a: number, b: number) => any;
   readonly wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8: (a: number, b: number, c: any) => void;
   readonly wasm_bindgen__closure__destroy__h56051a08f764ac79: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c: (a: number, b: number, c: any, d: any) => void;
