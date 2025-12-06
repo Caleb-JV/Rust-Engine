@@ -27,7 +27,8 @@ export const FilterComponent = () => {
 
     // Load options for column
     const handleFilterColumnClick = async (col: IFieldsKeeperItem<IColumnField>) => {
-        if (filterOptions[col.id]) return; // prevent reloading
+        if (filterOptions[col.id]) return;
+        if (col.value?.dataType === 'number') return; // prevent reloading
 
         const options = (await dataService.getFilterOptions(col.label)) as FilterOptionResponse;
         setFilterOptions((prev) => ({
@@ -103,20 +104,29 @@ export const FilterComponent = () => {
 
                         <AccordionContent className="px-3 py-2 text-xs">
                             {/* TABS: BASIC / ADVANCED */}
-                            <Tabs defaultValue="basic" className="w-full">
+                            <Tabs defaultValue={col.value?.dataType === 'number' ? 'advanced' : 'basic'} className="w-full">
                                 <TabsList className="grid grid-cols-2 w-40 h-7">
-                                    <TabsTrigger value="basic" className="text-xs px-2 py-1 cursor-pointer">
-                                        Basic
-                                    </TabsTrigger>
+                                    {/* Show BASIC only when NOT number */}
+                                    {col.value?.dataType !== 'number' && (
+                                        <TabsTrigger value="basic" className="text-xs px-2 py-1 cursor-pointer">
+                                            Basic
+                                        </TabsTrigger>
+                                    )}
+
                                     <TabsTrigger value="advanced" className="text-xs px-2 py-1 cursor-pointer">
-                                        Advanced
+                                        {col.value?.dataType !== 'number' ? 'Advanced' : 'Basic'}
                                     </TabsTrigger>
                                 </TabsList>
 
                                 {/* BASIC FILTERS */}
                                 <TabsContent value="basic" className="mt-3">
                                     <div className="border rounded-md p-3 bg-muted/50 space-y-2">
-                                        {!filterOptions[col.id] ? (
+                                        {/* If numeric field → do NOT show checkbox list */}
+                                        {col.value?.dataType === 'number' ? (
+                                            <div className="text-xs text-muted-foreground italic">
+                                                Numeric fields do not support basic filtering. Use Advanced filters.
+                                            </div>
+                                        ) : !filterOptions[col.id] ? (
                                             <div className="text-xs text-muted-foreground">Loading options...</div>
                                         ) : (
                                             <div className="space-y-1 max-h-40 overflow-auto">
@@ -172,7 +182,6 @@ export const FilterComponent = () => {
                                                                 <>
                                                                     <SelectItem value="equals">Equals</SelectItem>
                                                                     <SelectItem value="notequals">Not Equals</SelectItem>
-
                                                                     <SelectItem value="greaterthan">Greater Than</SelectItem>
                                                                     <SelectItem value="lessthan">Less Than</SelectItem>
                                                                     <SelectItem value="greaterthanorequal">Greater Than Or Equal</SelectItem>
