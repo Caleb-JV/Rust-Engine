@@ -8,18 +8,8 @@ import { useAppStore } from '@/store/appStore';
 import { selectProcessingStatus, selectAdditionalOptions, selectUIOptions } from '@/store/appStore';
 import { useEffect } from 'react';
 import { getWorkerClient } from '@/worker/WorkerClient';
-
-/**
- * Format bytes to human-readable format
- */
-const formatMemory = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-};
-import { getEstimatedJSTime } from '@/lib/data.utils';
+import { formatMemory, getEstimatedJSTime } from '@/lib/data.utils';
+import { dataService } from '@/services/dataService';
 
 export const MainHeader = () => {
     // state
@@ -67,6 +57,11 @@ export const MainHeader = () => {
             : null;
 
     // handlers
+    const handleSubtotalToggle = (value: boolean) => {
+        setAdditionalOptions({ showSubtotal: value });
+        dataService.getData();
+    };
+
     const getStatusBadge = () => {
         switch (processingStatus) {
             case 'loading':
@@ -179,7 +174,7 @@ export const MainHeader = () => {
                             <DropdownMenuContent align="end" className="min-w-52">
                                 <DropdownMenuItem className="flex items-center justify-between gap-4 text-xs" onSelect={(e) => e.preventDefault()}>
                                     <span>Show Subtotal</span>
-                                    <Switch checked={showSubtotal} onCheckedChange={(v) => setAdditionalOptions({ showSubtotal: Boolean(v) })} />
+                                    <Switch checked={showSubtotal} onCheckedChange={handleSubtotalToggle} />
                                 </DropdownMenuItem>
 
                                 <DropdownMenuItem className="flex items-center justify-between gap-4 text-xs" onSelect={(e) => e.preventDefault()}>

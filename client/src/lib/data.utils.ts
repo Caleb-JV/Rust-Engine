@@ -176,3 +176,14 @@ export const getEstimatedJSTime = (rustTimeMs: number, rows: number, cols: numbe
 
     return Math.min(Math.max(minTime, Math.round(estimated * 100) / 100), maxTime);
 };
+
+/**
+ * Format bytes to human-readable format
+ */
+export const formatMemory = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+};
