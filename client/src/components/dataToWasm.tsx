@@ -1,4 +1,4 @@
-export function DataToWasmAnimation({ active, progress }: { active: boolean; progress: number }) {
+export function DataToWasmAnimation({ active, progress, context }: { active: boolean; progress: number; context?: string }) {
     // Subtle random packet widths and stagger
     const packets = Array.from({ length: 14 }).map(() => ({
         w: 2 + Math.random() * 3,
@@ -6,6 +6,57 @@ export function DataToWasmAnimation({ active, progress }: { active: boolean; pro
     }));
 
     const speed = 1.2 - (progress / 100) * 0.7; // 1.2s → 0.5s
+
+    if (context === 'generating') {
+        return (
+            <div className="flex items-center justify-center py-10">
+                <div className="relative w-40 h-32 bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden">
+                    {/* LABEL */}
+                    <span className="absolute top-2 left-1/2 -translate-x-1/2 text-[11px] text-gray-600 font-medium tracking-wide">WASM</span>
+
+                    {/* PROCESSING LANES */}
+                    <div className="absolute inset-0 mt-5 px-4 flex flex-col gap-2 py-6">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="lane">
+                                <div className="bar" style={{ animationDelay: `${i * 0.25}s` }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <style>{`
+                .lane {
+                    width: 100%;
+                    height: 6px;
+                    background: #eef0f3;
+                    border-radius: 4px;
+                    overflow: hidden;
+                    position: relative;
+                }
+
+                .bar {
+                    position: absolute;
+                    top: 0;
+                    left: -40%;
+                    width: 40%;
+                    height: 100%;
+                    background: linear-gradient(
+                        to right,
+                        rgba(120, 144, 156, 0) 0%,
+                        rgba(120, 144, 156, 0.4) 50%,
+                        rgba(120, 144, 156, 0) 100%
+                    );
+                    animation: slideBar 1.4s ease-in-out infinite;
+                }
+
+                @keyframes slideBar {
+                    0% { left: -40%; }
+                    100% { left: 110%; }
+                }
+            `}</style>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full flex items-center justify-center py-6">

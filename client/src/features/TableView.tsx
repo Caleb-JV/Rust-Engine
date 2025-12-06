@@ -37,8 +37,8 @@ export const TableView = () => {
 
     // paint
     if (processingStatus === 'idle') return <FileUploader />;
-    if (isStreaming) {
-        return <DataToWasmAnimation active={true} progress={loadingProgress} />;
+    if (isStreaming || processingStatus === 'loading') {
+        return <DataToWasmAnimation active={true} progress={loadingProgress} context={processingStatus === 'loading' ? 'generating' : ''} />;
     }
 
     return (
