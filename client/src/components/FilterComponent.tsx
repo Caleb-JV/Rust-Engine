@@ -1,6 +1,6 @@
 import React from 'react';
 import { type IFieldsKeeperItem } from 'react-fields-keeper';
-import { useStore, selectPivotBuckets, selectFiltercondition, type IColumnField, type FilterCondition } from '@/store/fieldsStore';
+import { useAppStore, selectPivotBuckets, selectFiltercondition, type IColumnField, type FilterCondition } from '@/store/appStore';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { dataService } from '@/services/dataService';
@@ -15,10 +15,10 @@ export interface FilterOptionResponse {
 }
 
 export const FilterComponent = () => {
-    const pivotBuckets = useStore(selectPivotBuckets);
-    const filterConditions = useStore(selectFiltercondition);
-    const addOrUpdateFilterCondition = useStore((state) => state.addOrUpdateFilterCondition);
-    const removeFilterCondition = useStore((state) => state.removeFilterCondition);
+    const pivotBuckets = useAppStore(selectPivotBuckets);
+    const filterConditions = useAppStore(selectFiltercondition);
+    const addOrUpdateFilterCondition = useAppStore((state) => state.addOrUpdateFilterCondition);
+    const removeFilterCondition = useAppStore((state) => state.removeFilterCondition);
 
     const columnsBucket = getCurrentPivotItems(pivotBuckets);
     const [filterOptions, setFilterOptions] = React.useState<Record<string, string[]>>({});

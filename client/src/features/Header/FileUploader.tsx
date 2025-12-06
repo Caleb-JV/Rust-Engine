@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { selectProcessingStatus, useStore } from '@/store/fieldsStore';
+import { selectProcessingStatus, useAppStore } from '@/store/appStore';
 import { dataService } from '@/services/dataService';
 import { UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
@@ -8,8 +8,8 @@ import { getWorkerClient } from '@/worker/WorkerClient';
 export default function FileUploader() {
     // state
     const [isDragging, setIsDragging] = useState(false);
-    const setFileName = useStore((state) => state.setFileName);
-    const processingStatus = useStore(selectProcessingStatus);
+    const setFileName = useAppStore((state) => state.setFileName);
+    const processingStatus = useAppStore(selectProcessingStatus);
 
     // ref
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,8 +52,8 @@ export default function FileUploader() {
             const rowCount = 10_000_000; // 5 million rows
             const seed = BigInt(Date.now());
 
-            useStore.getState().setProcessingStatus('loading');
-            useStore.getState().setFileName('sample_data.csv');
+            useAppStore.getState().setProcessingStatus('loading');
+            useAppStore.getState().setFileName('sample_data.csv');
 
             console.log(`🔨 Generating ${rowCount.toLocaleString()} rows of sample data...`);
 
@@ -70,11 +70,11 @@ export default function FileUploader() {
             // Trigger metadata refresh
             await dataService.refreshMetadata();
 
-            useStore.getState().setProcessingStatus('success');
+            useAppStore.getState().setProcessingStatus('success');
         } catch (error) {
             console.error('Failed to generate sample data:', error);
-            useStore.getState().setProcessingStatus('error');
-            useStore.getState().setFileName('');
+            useAppStore.getState().setProcessingStatus('error');
+            useAppStore.getState().setFileName('');
         }
     };
 

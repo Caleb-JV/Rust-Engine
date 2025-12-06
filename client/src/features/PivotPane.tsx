@@ -1,5 +1,5 @@
 import { CheckIcon, ChevronDownIcon } from 'lucide-react';
-import { useStore, selectPivotBuckets, selectPivotPaneCollapsed, type IColumnField } from '@/store/fieldsStore';
+import { useAppStore, selectPivotBuckets, selectPivotPaneCollapsed, type IColumnField } from '@/store/appStore';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FieldsKeeperBucket, type IFieldsKeeperBucket, type IFieldsKeeperItem, type ISuffixBucketNodeRendererProps } from 'react-fields-keeper';
 import { CollapsedPaneComponent, PanelHeader } from '@/components/PaneChrome';
@@ -10,12 +10,12 @@ const AGGREGATION_OPTIONS = ['sum', 'average', 'min', 'max', 'count'];
 
 export const PivotPane = () => {
     // state
-    const pivotBuckets = useStore(selectPivotBuckets);
-    const isCollapsed = useStore(selectPivotPaneCollapsed);
+    const pivotBuckets = useAppStore(selectPivotBuckets);
+    const isCollapsed = useAppStore(selectPivotPaneCollapsed);
 
     // dispatch
-    const setIsCollapsed = useStore((state) => state.setPivotPaneCollapsed);
-    const setPivotBuckets = useStore((state) => state.setPivotBuckets);
+    const setIsCollapsed = useAppStore((state) => state.setPivotPaneCollapsed);
+    const setPivotBuckets = useAppStore((state) => state.setPivotBuckets);
 
     // compute
     const columnsBucket = pivotBuckets.find((b) => b.id === 'columns');

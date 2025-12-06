@@ -1,13 +1,13 @@
 import { Loader2 } from 'lucide-react';
-import { useStore, selectProcessingStatus } from '../store/fieldsStore';
+import { useAppStore, selectProcessingStatus } from '../store/appStore';
 
 /**
  * Smooth rotating loader that demonstrates UI remains responsive
  * during heavy WASM operations running in Web Worker
  */
 export const ProcessingIndicator = () => {
-    const processingStatus = useStore(selectProcessingStatus);
-    const latestTiming = useStore((state) => state.latestTiming);
+    const processingStatus = useAppStore(selectProcessingStatus);
+    const latestTiming = useAppStore((state) => state.latestTiming);
 
     const isProcessing = processingStatus === 'loading' || processingStatus === 'processing';
 

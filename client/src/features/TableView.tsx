@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { dataService } from '../services/dataService';
-import { useStore, selectProcessingStatus, selectLoadingProgress, selectUIOptions } from '../store/fieldsStore';
+import { useAppStore, selectProcessingStatus, selectLoadingProgress, selectUIOptions } from '../store/appStore';
 import { useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { millify } from 'millify';
@@ -8,11 +8,11 @@ import FileUploader from './Header/FileUploader';
 import { DataToWasmAnimation } from '@/components/dataToWasm';
 
 export const TableView = () => {
-    const processingStatus = useStore(selectProcessingStatus);
-    const tableRenderCounter = useStore((state) => state.tableRenderCounter);
-    const { formatValues } = useStore(selectUIOptions);
-    const isStreaming = useStore((state) => state.isStreaming);
-    const loadingProgress = useStore(selectLoadingProgress);
+    const processingStatus = useAppStore(selectProcessingStatus);
+    const tableRenderCounter = useAppStore((state) => state.tableRenderCounter);
+    const { formatValues } = useAppStore(selectUIOptions);
+    const isStreaming = useAppStore((state) => state.isStreaming);
+    const loadingProgress = useAppStore(selectLoadingProgress);
 
     const parentRef = useRef<HTMLDivElement | null>(null);
     const headerRowRef = useRef<HTMLDivElement | null>(null);

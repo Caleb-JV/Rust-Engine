@@ -14,11 +14,12 @@ import {
     DateMillisecond,
     TimestampMillisecond,
 } from 'apache-arrow';
+import { toast } from 'sonner';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
 import { rustTypeToDataType } from '../types/metadata';
 import type { IFieldsKeeperItem } from 'react-fields-keeper';
-import type { IAdditionalOptions, IColumnField, TimingLog } from '../store/fieldsStore';
-import { useStore } from '../store/fieldsStore';
+import type { IAdditionalOptions, IColumnField, TimingLog } from '../store/appStore';
+import { useAppStore } from '../store/appStore';
 import { getWorkerClient } from '../worker/WorkerClient';
 import { getPivotItemsToFetchData } from '@/lib/data.utils';
 
@@ -42,7 +43,7 @@ export interface FilterCondition {
     value: string | number | boolean | string[] | { min: number; max: number };
 }
 
-export interface SortSpec {
+export interface ISortOption {
     column: string;
     direction: 'asc' | 'desc';
 }
@@ -60,7 +61,7 @@ export interface IPivotOptions {
 export interface DataQuery {
     pivot: IPivotOptions;
     filters: FilterCondition[];
-    sort?: SortSpec[];
+    sort?: ISortOption[];
     limit?: number;
     offset?: number;
     options?: IAdditionalOptions;
@@ -271,7 +272,7 @@ class DataService {
      * Uses streaming for large files (>5MB) with progress updates
      */
     async processFile(file: File): Promise<IFieldsKeeperItem<IColumnField>[]> {
-        const store = useStore.getState();
+        const store = useAppStore.getState();
 
         try {
             store.resetStore();
@@ -362,7 +363,7 @@ class DataService {
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
             console.error('Error processing file:', err);
-            store.setError(errorMessage);
+            toast.error(errorMessage);
             store.setProcessingStatus('error');
             throw err;
         }
@@ -379,18 +380,18 @@ class DataService {
      * NEW: Uses columnar buffers instead of IPC for zero-copy performance
      */
     getData(): void {
-        const { filterCondition, pivotBuckets, additionalOptions } = useStore.getState();
+        const { filterCondition, pivotBuckets, additionalOptions, sortOptions } = useAppStore.getState();
 
         const query: DataQuery = {
             filters: filterCondition,
             pivot: getPivotItemsToFetchData(pivotBuckets),
-            sort: [],
+            sort: sortOptions,
             options: additionalOptions,
         };
 
         console.log(query);
 
-        const store = useStore.getState();
+        const store = useAppStore.getState();
 
         store.setProcessingStatus('processing');
 
@@ -468,7 +469,7 @@ class DataService {
             .catch((err) => {
                 const errorMessage = err instanceof Error ? err.message : 'Failed to get data';
                 console.error('[DataService] Error getting data:', err);
-                store.setError(errorMessage);
+                toast.error(errorMessage);
                 store.setProcessingStatus('error');
                 throw err;
             });
@@ -485,7 +486,7 @@ class DataService {
                 throw new Error(response.message || 'Failed to get filter options');
             }
 
-            const store = useStore.getState();
+            const store = useAppStore.getState();
             const timing: TimingLog = {
                 operation: 'Loading Filters',
                 duration_ms: response.timeTaken,
@@ -564,6 +565,7 @@ class DataService {
         return this.metadata.columns.map((col) => ({
             id: col.name,
             label: col.name,
+            type: rustTypeToDataType(col.type) === 'number' ? 'value' : 'category',
             value: {
                 id: col.name,
                 name: col.name,
@@ -585,7 +587,7 @@ class DataService {
      * Use All Data - Move all columns to columns bucket
      */
     async useAllData(): Promise<void> {
-        const store = useStore.getState();
+        const store = useAppStore.getState();
         const allItems = this.getAllFieldItems();
 
         store.removeAllFilters();
@@ -603,7 +605,7 @@ class DataService {
      * Clear all data - Reset pivot and filters
      */
     clearAllData(): void {
-        const store = useStore.getState();
+        const store = useAppStore.getState();
         store.clearAllAssignments();
 
         this.resultColumns.clear();
@@ -621,7 +623,7 @@ class DataService {
             // Ensure worker is initialized
             await this.initialize();
 
-            const store = useStore.getState();
+            const store = useAppStore.getState();
 
             // Get metadata from Rust Worker
             const metadataResponse = await this.workerClient.getMetaData();
@@ -658,8 +660,10 @@ class DataService {
             console.log('[DataService] Metadata refreshed:', this.metadata);
         } catch (err) {
             console.error('[DataService] Failed to refresh metadata:', err);
-            const store = useStore.getState();
+            const store = useAppStore.getState();
+            const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
             store.setProcessingStatus('error');
+            toast.error(errorMessage);
             throw err;
         }
     }
@@ -672,7 +676,7 @@ class DataService {
         this.resultColumns.clear();
         this.resultSchema = [];
         this.rowCount = 0;
-        const store = useStore.getState();
+        const store = useAppStore.getState();
         store.resetStore();
     }
 }

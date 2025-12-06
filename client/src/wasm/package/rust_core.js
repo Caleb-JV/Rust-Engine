@@ -213,15 +213,12 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     CLOSURE_DTORS.register(real, state, state);
     return real;
 }
-/**
- * ------------------------------------------------------------------
- *   Get current memory usage in bytes
- * ------------------------------------------------------------------
- * @returns {number}
- */
-export function get_memory_usage() {
-    const ret = wasm.get_memory_usage();
-    return ret >>> 0;
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function takeFromExternrefTable0(idx) {
@@ -229,6 +226,21 @@ function takeFromExternrefTable0(idx) {
     wasm.__externref_table_dealloc(idx);
     return value;
 }
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Initialize with CSV header to infer schema
+ * ------------------------------------------------------------------
+ * @param {Uint8Array} header_bytes
+ */
+export function seed_start(header_bytes) {
+    const ptr0 = passArray8ToWasm0(header_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_start(ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
 /**
  * ------------------------------------------------------------------
  *   Generate sample data and store it directly
@@ -245,12 +257,6 @@ export function generate_and_seed_sample_data(row_count, seed) {
     return ret[0] >>> 0;
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
 /**
  * ------------------------------------------------------------------
  *   STREAMING API: Process and append a chunk of CSV data
@@ -269,6 +275,17 @@ export function seed_chunk(chunk_bytes, has_header) {
 
 /**
  * ------------------------------------------------------------------
+ *   Get current memory usage in bytes
+ * ------------------------------------------------------------------
+ * @returns {number}
+ */
+export function get_memory_usage() {
+    const ret = wasm.get_memory_usage();
+    return ret >>> 0;
+}
+
+/**
+ * ------------------------------------------------------------------
  *   STREAMING API: Finalize streaming (returns total row count)
  * ------------------------------------------------------------------
  * @returns {number}
@@ -282,18 +299,12 @@ export function seed_finalize() {
 }
 
 /**
- * ------------------------------------------------------------------
- *   STREAMING API: Initialize with CSV header to infer schema
- * ------------------------------------------------------------------
- * @param {Uint8Array} header_bytes
+ * Get all timing log entries
+ * @returns {any}
  */
-export function seed_start(header_bytes) {
-    const ptr0 = passArray8ToWasm0(header_bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.seed_start(ptr0, len0);
-    if (ret[1]) {
-        throw takeFromExternrefTable0(ret[0]);
-    }
+export function get_timing_log() {
+    const ret = wasm.get_timing_log();
+    return ret;
 }
 
 /**
@@ -304,11 +315,15 @@ export function clear_timing_log() {
 }
 
 /**
- * Get all timing log entries
- * @returns {any}
+ * Async version of get_data with a structured response envelope
+ * Returns { columns: [...], rowCount: number } instead of IPC bytes
+ * @param {string} query_json
+ * @returns {Promise<any>}
  */
-export function get_timing_log() {
-    const ret = wasm.get_timing_log();
+export function get_data_async(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_async(ptr0, len0);
     return ret;
 }
 
@@ -325,18 +340,6 @@ export function get_filter_options_async(col_name) {
 }
 
 /**
- * Async WASM export: seed data and return a structured response with timing
- * @param {Uint8Array} bytes
- * @returns {Promise<any>}
- */
-export function seed_async(bytes) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.seed_async(ptr0, len0);
-    return ret;
-}
-
-/**
  * Async WASM export: get meta data with a structured response
  * @returns {Promise<any>}
  */
@@ -346,15 +349,14 @@ export function get_meta_data_async() {
 }
 
 /**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- * @param {string} query_json
+ * Async WASM export: seed data and return a structured response with timing
+ * @param {Uint8Array} bytes
  * @returns {Promise<any>}
  */
-export function get_data_async(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+export function seed_async(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_async(ptr0, len0);
+    const ret = wasm.seed_async(ptr0, len0);
     return ret;
 }
 
@@ -389,12 +391,12 @@ export function generate_sample_data(row_count, seed) {
     return takeFromExternrefTable0(ret[0]);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3);
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
@@ -504,7 +506,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(a, state0.b, arg0, arg1);
+                    return wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -592,7 +594,7 @@ function __wbg_get_imports() {
     };
     imports.wbg.__wbindgen_cast_74f3a90a349943d1 = function(arg0, arg1) {
         // Cast intrinsic for `Closure(Closure { dtor_idx: 354, function: Function { arguments: [Externref], shim_idx: 355, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h56051a08f764ac79, wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8);
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
         return ret;
     };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {
