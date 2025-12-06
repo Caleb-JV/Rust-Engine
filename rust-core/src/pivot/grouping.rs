@@ -3,11 +3,10 @@ use std::sync::Arc;
 
 use arrow_array::{Array, Float64Array, RecordBatch, StringArray};
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
-use chrono::{NaiveDate, NaiveDateTime};
 use wasm_bindgen::JsValue;
 
-use crate::error::js_err;
-use crate::query_types::{PivotAggregation, PivotSpec};
+use crate::utils::error::js_err;
+use crate::types::query_types::{PivotAggregation, PivotSpec};
 
 use super::aggregation::compute_aggregation;
 
@@ -162,7 +161,7 @@ pub(crate) fn group_and_aggregate(
             .collect();
 
         // Helper to flush subtotal for a given level
-        let mut flush_level = |level: usize,
+        let flush_level = |level: usize,
                                output_rows: &mut Vec<OutputRow>,
                                level_states: &mut [LevelState]| {
             if let Some(ref prefix) = level_states[level].prefix {
@@ -329,26 +328,131 @@ fn get_string_value(array: &dyn Array, idx: usize) -> Result<String, JsValue> {
                 .as_any()
                 .downcast_ref::<arrow_array::Date32Array>()
                 .ok_or_else(|| js_err("Failed to downcast to Date32Array"))?;
-
             let days = arr.value(idx);
-            let date = NaiveDate::from_yo_opt(1970, 1)
-                .unwrap()
-                + chrono::Duration::days(days as i64);
-
-            Ok(date.format("%Y-%m-%d").to_string())
+            Ok(format_date32(days))
         }
         DataType::Date64 => {
             let arr = array
                 .as_any()
                 .downcast_ref::<arrow_array::Date64Array>()
                 .ok_or_else(|| js_err("Failed to downcast to Date64Array"))?;
-
-            let ts_ms = arr.value(idx);
-            let dt = NaiveDateTime::from_timestamp_millis(ts_ms)
-                .ok_or_else(|| js_err("Invalid Date64 timestamp"))?;
-
-            Ok(dt.date().format("%Y-%m-%d").to_string())
+            let millis = arr.value(idx);
+            Ok(format_date64(millis))
+        }
+        DataType::Timestamp(_, _) => {
+            let arr = array
+                .as_any()
+                .downcast_ref::<arrow_array::TimestampMillisecondArray>()
+                .ok_or_else(|| js_err("Failed to downcast to TimestampMillisecondArray"))?;
+            let millis = arr.value(idx);
+            Ok(format_timestamp(millis))
         }
         dt => Err(js_err(&format!("Unsupported type for grouping: {:?}", dt))),
     }
+}
+
+/// Format Date32 (days since epoch) to YYYY-MM-DD string
+fn format_date32(days: i32) -> String {
+    const SECONDS_PER_DAY: i64 = 86400;
+    let seconds = days as i64 * SECONDS_PER_DAY;
+    format_unix_timestamp(seconds)
+}
+
+/// Format Date64 (milliseconds since epoch) to YYYY-MM-DD string
+fn format_date64(millis: i64) -> String {
+    let seconds = millis / 1000;
+    format_unix_timestamp(seconds)
+}
+
+/// Format Timestamp (milliseconds since epoch) to YYYY-MM-DD HH:MM:SS string
+fn format_timestamp(millis: i64) -> String {
+    let seconds = millis / 1000;
+    let remaining_millis = millis % 1000;
+    
+    let (year, month, day, hour, minute, second) = seconds_to_datetime(seconds);
+    
+    if hour == 0 && minute == 0 && second == 0 && remaining_millis == 0 {
+        format!("{:04}-{:02}-{:02}", year, month, day)
+    } else {
+        format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", year, month, day, hour, minute, second)
+    }
+}
+
+/// Format Unix timestamp (seconds since epoch) to YYYY-MM-DD string
+fn format_unix_timestamp(seconds: i64) -> String {
+    let (year, month, day, _, _, _) = seconds_to_datetime(seconds);
+    format!("{:04}-{:02}-{:02}", year, month, day)
+}
+
+/// Convert Unix timestamp to (year, month, day, hour, minute, second)
+fn seconds_to_datetime(mut seconds: i64) -> (i32, u32, u32, u32, u32, u32) {
+    const SECONDS_PER_DAY: i64 = 86400;
+    const SECONDS_PER_HOUR: i64 = 3600;
+    const SECONDS_PER_MINUTE: i64 = 60;
+    
+    // Handle negative timestamps (before epoch)
+    let negative = seconds < 0;
+    if negative {
+        seconds = seconds.abs();
+    }
+    
+    // Extract time components
+    let days = seconds / SECONDS_PER_DAY;
+    let remaining = seconds % SECONDS_PER_DAY;
+    let hour = (remaining / SECONDS_PER_HOUR) as u32;
+    let minute = ((remaining % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE) as u32;
+    let second = (remaining % SECONDS_PER_MINUTE) as u32;
+    
+    // Convert days to calendar date (simplified algorithm)
+    let mut year = 1970;
+    let mut day_count = if negative { -days } else { days };
+    
+    if negative {
+        // Go backwards from 1970
+        while day_count < 0 {
+            year -= 1;
+            let days_in_year = if is_leap_year(year) { 366 } else { 365 };
+            day_count += days_in_year;
+        }
+    } else {
+        // Go forwards from 1970
+        loop {
+            let days_in_year = if is_leap_year(year) { 366 } else { 365 };
+            if day_count < days_in_year {
+                break;
+            }
+            day_count -= days_in_year;
+            year += 1;
+        }
+    }
+    
+    // Convert day of year to month and day
+    let (month, day) = day_of_year_to_month_day(day_count as u32, is_leap_year(year));
+    
+    (year as i32, month, day, hour, minute, second)
+}
+
+/// Check if a year is a leap year
+fn is_leap_year(year: i64) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+/// Convert day of year to (month, day)
+fn day_of_year_to_month_day(day_of_year: u32, is_leap: bool) -> (u32, u32) {
+    let days_in_month = if is_leap {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+    
+    let mut remaining = day_of_year;
+    for (month_idx, &days) in days_in_month.iter().enumerate() {
+        if remaining < days {
+            return ((month_idx + 1) as u32, remaining + 1);
+        }
+        remaining -= days;
+    }
+    
+    // Should not reach here, but return December 31 as fallback
+    (12, 31)
 }

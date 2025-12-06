@@ -62,6 +62,9 @@ interface IRootState {
     // Timing Logs (only latest operation)
     latestTiming: TimingLog | null;
 
+    // Memory Usage
+    memoryUsageBytes: number;
+
     // UI State
     panelState: {
         activeTab: ActiveTab;
@@ -93,6 +96,7 @@ interface IRootState {
     setActiveTab: (tab: ActiveTab) => void;
     incrementTableRenderCounter: () => void;
     setLatestTiming: (log: TimingLog | null) => void;
+    setMemoryUsage: (bytes: number) => void;
     setDataPaneCollapsed: (collapsed: boolean) => void;
     setFiltersPaneCollapsed: (collapsed: boolean) => void;
     setPivotPaneCollapsed: (collapsed: boolean) => void;
@@ -106,6 +110,12 @@ interface IRootState {
     setAdditionalOptions: (options: Partial<IAdditionalOptions>) => void;
     setUIOptions: (options: Partial<IUIOptions>) => void;
     setSortOptions: (sorts: ISortOption[]) => void;
+    loadingProgress: number;
+    setLoadingProgress: (p: number) => void;
+    streamingDone: boolean;
+    setStreamingDone: (done: boolean) => void;
+    isStreaming: boolean;
+    setisStreaming: (streaming: boolean) => void;
 }
 
 const initialState = {
@@ -119,6 +129,7 @@ const initialState = {
     },
     tableRenderCounter: 0,
     latestTiming: null,
+    memoryUsageBytes: 0,
     pivotBuckets: [
         { id: 'columns', items: [] },
         { id: 'values', items: [] },
@@ -133,6 +144,9 @@ const initialState = {
     uiOptions: {
         formatValues: true,
     } as IUIOptions,
+    loadingProgress: 0,
+    streamingDone: false,
+    isStreaming: false,
 };
 
 export const useAppStore = create<IRootState>()(
@@ -142,7 +156,7 @@ export const useAppStore = create<IRootState>()(
 
             // App Status Actions
             setProcessingStatus: (status) => set({ processingStatus: status }, false, 'setProcessingStatus'),
-
+            setLoadingProgress: (p) => set({ loadingProgress: p }),
             setTableRowCount: (count) => set({ tableRowCount: count }, false, 'setTableRowCount'),
 
             setTableColumnCount: (count) => set({ tableColumnCount: count }, false, 'setTableColumnCount'),
@@ -154,6 +168,9 @@ export const useAppStore = create<IRootState>()(
 
             // Timing Actions
             setLatestTiming: (log) => set({ latestTiming: log }, false, 'setLatestTiming'),
+
+            // Memory Actions
+            setMemoryUsage: (bytes) => set({ memoryUsageBytes: bytes }, false, 'setMemoryUsage'),
 
             // UI Actions
             setActiveTab: (tab) =>
@@ -194,7 +211,8 @@ export const useAppStore = create<IRootState>()(
 
             // Pivot Actions
             setPivotBuckets: (buckets) => set({ pivotBuckets: buckets }, false, 'setPivotBuckets'),
-
+            setStreamingDone: (done: boolean) => set({ streamingDone: done }, false, 'setStreamingDone'),
+            setisStreaming: (streaming: boolean) => set({ isStreaming: streaming }, false, 'setisStreaming'),
             clearAllAssignments: () =>
                 set(
                     {
@@ -276,5 +294,6 @@ export const selectDataPaneCollapsed = (state: IRootState) => state.panelState.i
 export const selectFiltersPaneCollapsed = (state: IRootState) => state.panelState.isFiltersPaneCollapsed;
 export const selectPivotPaneCollapsed = (state: IRootState) => state.panelState.isPivotPaneCollapsed;
 export const selectFiltercondition = (state: IRootState) => state.filterCondition;
+export const selectLoadingProgress = (state: IRootState) => state.loadingProgress;
 export const selectAdditionalOptions = (state: IRootState) => state.additionalOptions;
 export const selectUIOptions = (state: IRootState) => state.uiOptions;

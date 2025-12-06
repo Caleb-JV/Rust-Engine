@@ -7,13 +7,16 @@ import init, {
     get_meta_data_async,
     get_data_async,
     get_filter_options_async,
-    get_processed_data_async,
     // NEW streaming + timing exports
     seed_start,
     seed_chunk,
     seed_finalize,
     get_timing_log,
     clear_timing_log,
+    // Memory usage
+    get_memory_usage,
+    // Sample data generation
+    generate_and_seed_sample_data,
 } from '../wasm/package/rust_core';
 
 import type { WorkerMessage, WorkerRequest, WorkerResponse, IResponse, IProcessFileProgress, IProcessFileResult } from './types';
@@ -131,17 +134,37 @@ const handleGetMetaData = async (): Promise<IResponse<string>> => {
     return (await get_meta_data_async()) as IResponse<string>;
 };
 
-const handleGetData = async (queryJson: string): Promise<IResponse<any>> => {
+const handleGetData = async (queryJson: string): Promise<IResponse<{ columns: unknown[]; rowCount: number }>> => {
     // Returns { columns: ArrowColumnBuffer[], rowCount: number }
-    return (await get_data_async(queryJson)) as IResponse<any>;
+    return (await get_data_async(queryJson)) as IResponse<{ columns: unknown[]; rowCount: number }>;
 };
 
 const handleGetFilterOptions = async (column: string): Promise<IResponse<string>> => {
     return (await get_filter_options_async(column)) as IResponse<string>;
 };
 
-const handleProcessData = async (data: string, pivot: string, aggregationMap: string): Promise<IResponse<string>> => {
-    return (await get_processed_data_async(data, pivot, aggregationMap)) as IResponse<string>;
+const handleGetMemoryUsage = (): IResponse<number> => {
+    const startTime = performance.now();
+
+    // Check if WASM is initialized before calling memory function
+    if (!isInitialized) {
+        return {
+            success: true,
+            message: 'WASM not initialized',
+            data: 0,
+            timeTaken: 0,
+        };
+    }
+
+    const memoryBytes = get_memory_usage();
+    const endTime = performance.now();
+
+    return {
+        success: true,
+        message: '',
+        data: memoryBytes,
+        timeTaken: endTime - startTime,
+    };
 };
 
 // ============================================================================
@@ -180,13 +203,38 @@ const handleMessage = async (message: WorkerMessage<WorkerRequest>): Promise<Wor
                 return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
             }
 
-            case REQUEST_TYPE.GET_PROCESSED_DATA: {
-                const response = await handleProcessData(payload.payload.data, payload.payload.pivot, payload.payload.aggregationMap);
-                return { type: RESPONSE_TYPE.GET_FILTER_OPTIONS_SUCCESS, response };
+            case REQUEST_TYPE.GET_MEMORY_USAGE: {
+                const response = handleGetMemoryUsage();
+                return { type: RESPONSE_TYPE.GET_MEMORY_USAGE_SUCCESS, response };
+            }
+
+            case REQUEST_TYPE.GENERATE_SAMPLE_DATA: {
+                await initializeWasm(); // Ensure WASM is initialized
+
+                const startTime = performance.now();
+                const { rowCount, seed } = payload.payload;
+
+                console.log(`[Worker] Generating ${rowCount.toLocaleString()} rows of sample data...`);
+                const totalRows = generate_and_seed_sample_data(rowCount, seed);
+
+                const endTime = performance.now();
+                const timeTaken = endTime - startTime;
+
+                console.log(`[Worker] Generated ${totalRows.toLocaleString()} rows in ${timeTaken.toFixed(2)}ms`);
+
+                const response: IResponse<number> = {
+                    success: true,
+                    message: `Generated ${totalRows.toLocaleString()} rows`,
+                    data: totalRows,
+                    timeTaken,
+                };
+
+                return { type: RESPONSE_TYPE.GENERATE_SAMPLE_DATA_SUCCESS, response };
             }
 
             // NEW: processFile with streaming + progress
             case REQUEST_TYPE.PROCESS_FILE: {
+                const startTime = performance.now();
                 const file = payload.payload.file as File;
                 const useStreaming = file.size > 5 * 1024 * 1024; // > 5MB => stream
 
@@ -216,6 +264,9 @@ const handleMessage = async (message: WorkerMessage<WorkerRequest>): Promise<Wor
                 const timing = getTimings();
                 const metadataResponse = await handleGetMetaData();
 
+                const endTime = performance.now();
+                const totalTimeTaken = endTime - startTime;
+
                 const result: IProcessFileResult = {
                     metadataJson: metadataResponse.data, // Extract the actual JSON string from IResponse
                     timing,
@@ -225,7 +276,7 @@ const handleMessage = async (message: WorkerMessage<WorkerRequest>): Promise<Wor
                     success: true,
                     message: '',
                     data: result,
-                    timeTaken: 0, // Timing is in the result.timing array
+                    timeTaken: totalTimeTaken,
                 };
 
                 return {

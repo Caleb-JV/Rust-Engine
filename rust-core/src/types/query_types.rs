@@ -34,8 +34,6 @@ pub enum FilterValue {
     Boolean(bool),
     Array(Vec<String>),
     Range { min: f64, max: f64 },
-    Date(String),           
-    DateRange { min: String, max: String },  
 }
 
 /// Sort direction
@@ -113,4 +111,15 @@ pub struct DataQuery {
     pub limit: Option<usize>,
     pub offset: Option<usize>,
     pub options: Option<AdditionalOptions>,
+}
+
+
+/// Supported aggregation types
+#[allow(dead_code)]
+pub enum AggregationType {
+    Sum,
+    Average,
+    Count,
+    Max,
+    Min,
 }

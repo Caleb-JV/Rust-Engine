@@ -289,11 +289,12 @@ class DataService {
             if (useStreaming) {
                 // 2a. Use streaming API with progress updates
                 console.log(`[DataService] Using streaming mode for file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+                store.setisStreaming(true);
+                store.setLoadingProgress?.(0);
 
                 const result = await this.workerClient.processFile(file, (progress) => {
                     console.log(`[DataService] Progress: ${progress.percent}%`);
-                    // You can emit progress to UI here if needed
-                    // store.setLoadingProgress?.(progress.percent);
+                    store.setLoadingProgress?.(progress.percent);
                 });
 
                 if (!result.success) {
@@ -313,6 +314,8 @@ class DataService {
                     duration_ms: result.timeTaken || 0,
                 };
                 store.setLatestTiming(seedTiming);
+                store.setisStreaming(false);
+                store.setLoadingProgress?.(100);
             } else {
                 // 2b. Small file: Use traditional seed method (faster for small files)
                 console.log(`[DataService] Using direct mode for file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
@@ -354,6 +357,7 @@ class DataService {
             const allItems = this.createFieldItems();
 
             store.setProcessingStatus('success');
+            this.getData();
 
             return allItems;
         } catch (err) {
@@ -384,6 +388,8 @@ class DataService {
             sort: sortOptions,
             options: additionalOptions,
         };
+
+        console.log(query);
 
         const store = useAppStore.getState();
 
@@ -438,16 +444,6 @@ class DataService {
                         );
                     }
                 }
-                const stringifiedRows = JSON.stringify(this.resultSchema, (_, value) =>
-                    typeof value === 'bigint'
-                        ? value.toString() // Convert BigInt to string
-                        : value,
-                );
-                const stringifiedPivot = JSON.stringify(['Tags']);
-                const stringifiedAggregationMap = JSON.stringify({ Parent: 'sum' });
-                this.resultSchema = JSON.parse(
-                    (await this.workerClient.getProcessedData(stringifiedRows, stringifiedPivot, stringifiedAggregationMap)).data,
-                );
                 const reconstructTime = performance.now() - reconstructStart;
                 const totalMainThreadTime = performance.now() - mainThreadStart;
 
@@ -463,7 +459,7 @@ class DataService {
                 store.setTableColumnCount(this.resultSchema.length);
 
                 const timing: TimingLog = {
-                    operation: 'Processing Query',
+                    operation: 'Processing',
                     duration_ms: response.timeTaken,
                 };
                 store.setLatestTiming(timing);
@@ -507,7 +503,7 @@ class DataService {
     /**
      * Get cell value by row and column (zero-copy columnar access)
      */
-    getCell(rowIndex: number, columnName: string): any {
+    getCell(rowIndex: number, columnName: string): unknown {
         const vector = this.resultColumns.get(columnName);
         if (!vector) return null;
 
@@ -616,6 +612,60 @@ class DataService {
         this.resultSchema = [];
         this.rowCount = 0;
         store.incrementTableRenderCounter();
+        this.getData();
+    }
+
+    /**
+     * Refresh metadata after sample data generation
+     */
+    async refreshMetadata(): Promise<void> {
+        try {
+            // Ensure worker is initialized
+            await this.initialize();
+
+            const store = useAppStore.getState();
+
+            // Get metadata from Rust Worker
+            const metadataResponse = await this.workerClient.getMetaData();
+            if (!metadataResponse.success) {
+                throw new Error(metadataResponse.message || 'Failed to get metadata');
+            }
+
+            const metaTiming: TimingLog = {
+                operation: 'Analyzing Generated Data',
+                duration_ms: metadataResponse.timeTaken,
+            };
+            store.setLatestTiming(metaTiming);
+
+            this.metadata = JSON.parse(metadataResponse.data) as IGetMetaDataResponse;
+
+            store.setTableRowCount(this.metadata.row_count);
+            store.setTableColumnCount(this.metadata.columns.length);
+            store.setFileName('sample_data_generated.csv');
+
+            // Convert metadata to FieldsKeeper items (for sidebar display)
+            this.createFieldItems();
+
+            // Reset pivot buckets to empty state
+            store.setPivotBuckets([
+                { id: 'columns', items: [] },
+                { id: 'values', items: [] },
+            ]);
+
+            this.rowCount = this.metadata.row_count;
+
+            // Fetch data with empty pivot/filter
+            this.getData();
+
+            console.log('[DataService] Metadata refreshed:', this.metadata);
+        } catch (err) {
+            console.error('[DataService] Failed to refresh metadata:', err);
+            const store = useAppStore.getState();
+            const errorMessage = err instanceof Error ? err.message : 'Failed to process file';
+            store.setProcessingStatus('error');
+            toast.error(errorMessage);
+            throw err;
+        }
     }
 
     /**
