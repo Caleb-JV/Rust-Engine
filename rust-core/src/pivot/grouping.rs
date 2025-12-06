@@ -323,6 +323,13 @@ fn get_string_value(array: &dyn Array, idx: usize) -> Result<String, JsValue> {
                 .ok_or_else(|| js_err("Failed to downcast to Float64Array"))?;
             Ok(arr.value(idx).to_string())
         }
+        DataType::Boolean => {
+            let arr = array
+                .as_any()
+                .downcast_ref::<arrow_array::BooleanArray>()
+                .ok_or_else(|| js_err("Failed to downcast to BooleanArray"))?;
+            Ok(arr.value(idx).to_string())
+        }
         DataType::Date32 => {
             let arr = array
                 .as_any()

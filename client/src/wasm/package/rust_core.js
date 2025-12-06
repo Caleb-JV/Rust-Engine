@@ -251,6 +251,58 @@ export function generate_sample_data(row_count, seed) {
 }
 
 /**
+ * Async version of get_data with a structured response envelope
+ * Returns { columns: [...], rowCount: number } instead of IPC bytes
+ * @param {string} query_json
+ * @returns {Promise<any>}
+ */
+export function get_data_async(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Async version of get_filter_options with a structured response envelope
+ * @param {string} col_name
+ * @returns {Promise<any>}
+ */
+export function get_filter_options_async(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Async WASM export: get meta data with a structured response
+ * @returns {Promise<any>}
+ */
+export function get_meta_data_async() {
+    const ret = wasm.get_meta_data_async();
+    return ret;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+/**
+ * Async WASM export: seed data and return a structured response with timing
+ * @param {Uint8Array} bytes
+ * @returns {Promise<any>}
+ */
+export function seed_async(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_async(ptr0, len0);
+    return ret;
+}
+
+/**
  * Get all timing log entries
  * @returns {any}
  */
@@ -266,12 +318,6 @@ export function clear_timing_log() {
     wasm.clear_timing_log();
 }
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
 /**
  * ------------------------------------------------------------------
  *   STREAMING API: Initialize with CSV header to infer schema
@@ -342,52 +388,6 @@ export function seed_finalize() {
         throw takeFromExternrefTable0(ret[1]);
     }
     return ret[0] >>> 0;
-}
-
-/**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- * @param {string} query_json
- * @returns {Promise<any>}
- */
-export function get_data_async(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Async version of get_filter_options with a structured response envelope
- * @param {string} col_name
- * @returns {Promise<any>}
- */
-export function get_filter_options_async(col_name) {
-    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_filter_options_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Async WASM export: get meta data with a structured response
- * @returns {Promise<any>}
- */
-export function get_meta_data_async() {
-    const ret = wasm.get_meta_data_async();
-    return ret;
-}
-
-/**
- * Async WASM export: seed data and return a structured response with timing
- * @param {Uint8Array} bytes
- * @returns {Promise<any>}
- */
-export function seed_async(bytes) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.seed_async(ptr0, len0);
-    return ret;
 }
 
 function wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2) {
