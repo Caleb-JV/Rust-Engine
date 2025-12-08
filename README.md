@@ -91,6 +91,8 @@ A production-grade data analytics application leveraging Rust + WebAssembly for 
 └────────────────────────────────────────────────────────────────┘
 ```
 
+![alt text](assets/architecture.png)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
