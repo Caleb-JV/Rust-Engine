@@ -1,6 +1,61 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * Clear the timing log
+ */
+export function clear_timing_log(): void;
+/**
+ * Get all timing log entries
+ */
+export function get_timing_log(): any;
+/**
+ * ------------------------------------------------------------------
+ *   Get current memory usage in bytes
+ * ------------------------------------------------------------------
+ */
+export function get_memory_usage(): number;
+/**
+ * ------------------------------------------------------------------
+ *   Generate sample data and store it directly
+ * ------------------------------------------------------------------
+ */
+export function generate_and_seed_sample_data(row_count: number, seed: bigint): number;
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Process and append a chunk of CSV data
+ * ------------------------------------------------------------------
+ */
+export function seed_chunk(chunk_bytes: Uint8Array, has_header: boolean): void;
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Finalize streaming (returns total row count)
+ * ------------------------------------------------------------------
+ */
+export function seed_finalize(): number;
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Initialize with CSV header to infer schema
+ * ------------------------------------------------------------------
+ */
+export function seed_start(header_bytes: Uint8Array): void;
+/**
+ * Async version of get_filter_options with a structured response envelope
+ */
+export function get_filter_options_async(col_name: string): Promise<any>;
+/**
+ * Async WASM export: seed data and return a structured response with timing
+ */
+export function seed_async(bytes: Uint8Array): Promise<any>;
+/**
+ * Async WASM export: get meta data with a structured response
+ */
+export function get_meta_data_async(): Promise<any>;
+/**
+ * Async version of get_data with a structured response envelope
+ * Returns { columns: [...], rowCount: number } instead of IPC bytes
+ */
+export function get_data_async(query_json: string): Promise<any>;
+/**
  * Generate realistic sample data with 5 million rows
  * 
  * Schema:
@@ -21,71 +76,11 @@
  * - month: String (Jan-Dec)
  */
 export function generate_sample_data(row_count: number, seed: bigint): any;
-/**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- */
-export function get_data_async(query_json: string): Promise<any>;
-/**
- * Async version of get_filter_options with a structured response envelope
- */
-export function get_filter_options_async(col_name: string): Promise<any>;
-/**
- * Async WASM export: get meta data with a structured response
- */
-export function get_meta_data_async(): Promise<any>;
-/**
- * Async WASM export: seed data and return a structured response with timing
- */
-export function seed_async(bytes: Uint8Array): Promise<any>;
-/**
- * Get all timing log entries
- */
-export function get_timing_log(): any;
-/**
- * Clear the timing log
- */
-export function clear_timing_log(): void;
-/**
- * ------------------------------------------------------------------
- *   STREAMING API: Initialize with CSV header to infer schema
- * ------------------------------------------------------------------
- */
-export function seed_start(header_bytes: Uint8Array): void;
-/**
- * ------------------------------------------------------------------
- *   Generate sample data and store it directly
- * ------------------------------------------------------------------
- */
-export function generate_and_seed_sample_data(row_count: number, seed: bigint): number;
-/**
- * ------------------------------------------------------------------
- *   STREAMING API: Process and append a chunk of CSV data
- * ------------------------------------------------------------------
- */
-export function seed_chunk(chunk_bytes: Uint8Array, has_header: boolean): void;
-/**
- * ------------------------------------------------------------------
- *   Get current memory usage in bytes
- * ------------------------------------------------------------------
- */
-export function get_memory_usage(): number;
-/**
- * ------------------------------------------------------------------
- *   STREAMING API: Finalize streaming (returns total row count)
- * ------------------------------------------------------------------
- */
-export function seed_finalize(): number;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
-  readonly get_data_async: (a: number, b: number) => any;
-  readonly get_filter_options_async: (a: number, b: number) => any;
-  readonly get_meta_data_async: () => any;
-  readonly seed_async: (a: number, b: number) => any;
   readonly clear_timing_log: () => void;
   readonly get_timing_log: () => any;
   readonly generate_and_seed_sample_data: (a: number, b: bigint) => [number, number, number];
@@ -93,9 +88,14 @@ export interface InitOutput {
   readonly seed_chunk: (a: number, b: number, c: number) => [number, number];
   readonly seed_finalize: () => [number, number, number];
   readonly seed_start: (a: number, b: number) => [number, number];
-  readonly wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__closure__destroy__hefaf3f048dda7301: (a: number, b: number) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba: (a: number, b: number, c: any, d: any) => void;
+  readonly generate_sample_data: (a: number, b: bigint) => [number, number, number];
+  readonly get_data_async: (a: number, b: number) => any;
+  readonly get_filter_options_async: (a: number, b: number) => any;
+  readonly get_meta_data_async: () => any;
+  readonly seed_async: (a: number, b: number) => any;
+  readonly wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__h56051a08f764ac79: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_exn_store: (a: number) => void;

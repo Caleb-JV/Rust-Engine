@@ -38,6 +38,8 @@ pub use utils::data_generator::generate_sample_data;
 // Re-export streaming seed functions
 use wasm_bindgen::prelude::*;
 
+use crate::data_helpers::output::flatten_batches_to_js;
+
 /// ------------------------------------------------------------------
 ///   STREAMING API: Initialize with CSV header to infer schema
 /// ------------------------------------------------------------------
@@ -376,24 +378,10 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
 		batches = apply_limit_offset(batches, query.limit, query.offset)?;
 	}
 
-	// NEW: Combine batches and extract column buffers (zero-copy)
-	let final_schema = if batches.is_empty() {
-		schema
-	} else {
-		batches[0].schema()
-	};
-	
-	let combined_batch = combine_batches(&final_schema, &batches)?;
-	
-	// Create response object with columns and metadata
-	let columns = extract_column_buffers(&combined_batch)?;
-	let row_count = combined_batch.num_rows();
-	
-	let response = js_sys::Object::new();
-	js_sys::Reflect::set(&response, &"columns".into(), &columns)?;
-	js_sys::Reflect::set(&response, &"rowCount".into(), &JsValue::from_f64(row_count as f64))?;
-	
-	Ok(response.into())
+	// 100% MotherDuck style output
+let js_output = flatten_batches_to_js(&batches)?;
+Ok(js_output)
+
 }
 
 

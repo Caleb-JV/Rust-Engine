@@ -5,8 +5,9 @@ import { FieldsKeeperBucket, type IFieldsKeeperBucket, type IFieldsKeeperItem, t
 import { CollapsedPaneComponent, PanelHeader } from '@/components/PaneChrome';
 import { dataService } from '@/services/dataService';
 import { PANEL_WIDTH } from '@/lib/common.constants';
+import React from 'react';
 
-const AGGREGATION_OPTIONS = ['sum', 'average', 'min', 'max', 'count'];
+const AGGREGATION_OPTIONS = ['sum', 'average', 'min', 'max', 'count', 'stddev', 'first', 'last'];
 
 export const PivotPane = () => {
     // state
@@ -46,7 +47,10 @@ export const PivotPane = () => {
             }
             setPivotBuckets([columnsBucket, newBuckets]);
 
-            dataService.getData();
+            // Trigger data refresh with new aggregation
+            setTimeout(() => {
+                dataService.getData();
+            }, 100);
         };
 
         return (

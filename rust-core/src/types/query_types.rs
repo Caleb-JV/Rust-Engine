@@ -60,6 +60,9 @@ pub enum PivotAggregation {
     Count,
     Min,
     Max,
+    StdDev,
+    First,
+    Last,
 }
 
 /// Pivot row specification coming from the frontend
