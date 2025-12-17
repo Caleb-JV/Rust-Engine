@@ -58,6 +58,7 @@ pub fn encode_ipc(schema: &SchemaRef, batches: &[RecordBatch]) -> Result<Vec<u8>
 }
 
 /// Combine multiple RecordBatches into a single batch for contiguous memory
+#[allow(dead_code)]
 pub fn combine_batches(schema: &SchemaRef, batches: &[RecordBatch]) -> Result<RecordBatch, JsValue> {
     if batches.is_empty() {
         return Ok(RecordBatch::new_empty(Arc::clone(schema)));
@@ -72,6 +73,7 @@ pub fn combine_batches(schema: &SchemaRef, batches: &[RecordBatch]) -> Result<Re
 
 /// Extract raw Arrow column buffers for zero-copy transfer to JS
 /// Returns a JS array of column buffer objects
+#[allow(dead_code)]
 pub fn extract_column_buffers(batch: &RecordBatch) -> Result<JsValue, JsValue> {
     let js_array = js_sys::Array::new();
     
@@ -84,6 +86,7 @@ pub fn extract_column_buffers(batch: &RecordBatch) -> Result<JsValue, JsValue> {
 }
 
 /// Extract buffers from a single Arrow array
+#[allow(dead_code)]
 fn extract_single_column(name: &str, array: &Arc<dyn Array>) -> Result<JsValue, JsValue> {
     let obj = Object::new();
     let array_data = array.to_data();
@@ -323,6 +326,7 @@ fn extract_single_column(name: &str, array: &Arc<dyn Array>) -> Result<JsValue, 
 }
 
 /// Format Date32 (days since epoch) to YYYY-MM-DD string
+#[allow(dead_code)]
 fn format_date32(days: i32) -> String {
     const SECONDS_PER_DAY: i64 = 86400;
     let seconds = days as i64 * SECONDS_PER_DAY;
@@ -330,12 +334,14 @@ fn format_date32(days: i32) -> String {
 }
 
 /// Format Date64 (milliseconds since epoch) to YYYY-MM-DD string
+#[allow(dead_code)]
 fn format_date64(millis: i64) -> String {
     let seconds = millis / 1000;
     format_unix_timestamp(seconds)
 }
 
 /// Format Timestamp (milliseconds since epoch) to YYYY-MM-DD HH:MM:SS string
+#[allow(dead_code)]
 fn format_timestamp(millis: i64) -> String {
     let seconds = millis / 1000;
     let remaining_millis = millis % 1000;
@@ -350,12 +356,14 @@ fn format_timestamp(millis: i64) -> String {
 }
 
 /// Format Unix timestamp (seconds since epoch) to YYYY-MM-DD string
+#[allow(dead_code)]
 fn format_unix_timestamp(seconds: i64) -> String {
     let (year, month, day, _, _, _) = seconds_to_datetime(seconds);
     format!("{:04}-{:02}-{:02}", year, month, day)
 }
 
 /// Convert Unix timestamp to (year, month, day, hour, minute, second)
+#[allow(dead_code)]
 fn seconds_to_datetime(mut seconds: i64) -> (i32, u32, u32, u32, u32, u32) {
     const SECONDS_PER_DAY: i64 = 86400;
     const SECONDS_PER_HOUR: i64 = 3600;
@@ -404,11 +412,13 @@ fn seconds_to_datetime(mut seconds: i64) -> (i32, u32, u32, u32, u32, u32) {
 }
 
 /// Check if a year is a leap year
+#[allow(dead_code)]
 fn is_leap_year(year: i64) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
 
 /// Convert day of year to (month, day)
+#[allow(dead_code)]
 fn day_of_year_to_month_day(day_of_year: u32, is_leap: bool) -> (u32, u32) {
     let days_in_month = if is_leap {
         [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]

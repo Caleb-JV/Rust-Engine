@@ -6,7 +6,6 @@ use wasm_bindgen::JsValue;
 
 use crate::utils::error::js_err;
 
-/// Flattens Vec<RecordBatch> → unified column buffers (MotherDuck style)
 pub fn flatten_batches_to_js(
     batches: &[RecordBatch],
 ) -> Result<JsValue, JsValue> {

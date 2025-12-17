@@ -1,5 +1,4 @@
 // -------------------------------------------------------------------------------------------------
-// MotherDuck-Optimized Parallel Pipeline for Arrow RecordBatch Processing
 // Chunking == FILTER ONLY
 // Global == PIVOT + SORT
 // -------------------------------------------------------------------------------------------------
@@ -82,7 +81,6 @@ fn split_batches_for_parallel(
 }
 
 // -------------------------------------------------------------------------------------------------
-// MotherDuck Parallel Pipeline
 // FILTER per chunk
 // PIVOT globally
 // SORT globally
@@ -100,10 +98,10 @@ pub fn process_pipeline_parallel(
         return Ok(vec![]);
     }
 
-    let total_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
+    let _total_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
 
     #[cfg(target_arch = "wasm32")]
-    console::log_1(&format!("🚀 MotherDuck Pipeline Start: {} rows", total_rows).into());
+    console::log_1(&format!("🚀 Pipeline Start: {} rows", _total_rows).into());
 
     // -----------------------------
     // 1. Chunk split
@@ -171,19 +169,16 @@ pub fn process_pipeline_parallel(
     // DONE
     // -----------------------------
 
-    let final_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
+    let _final_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
 
     #[cfg(target_arch = "wasm32")]
     console::log_1(
-        &format!("✅ MotherDuck Pipeline Complete: {} rows output", final_rows).into()
+        &format!("✅ Pipeline Complete: {} rows output", _final_rows).into()
     );
 
     Ok(batches)
 }
 
-// -------------------------------------------------------------------------------------------------
-// Combine batches (rarely used in MotherDuck flow)
-// -------------------------------------------------------------------------------------------------
 
 #[allow(dead_code)]
 pub fn combine_batches(

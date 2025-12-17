@@ -20,7 +20,7 @@ mod utils;
 
 // Imports from modules
 use utils::error::{js_err, js_err_arrow};
-use data_helpers::helpers::{to_simple_type, combine_batches, extract_column_buffers};
+use data_helpers::helpers::to_simple_type;
 use types::query_types::DataQuery;
 use storage::{STORED_BATCHES, STORED_SCHEMA};
 
@@ -378,7 +378,6 @@ pub(crate) fn get_data(query_json: &str) -> Result<JsValue, JsValue> {
 		batches = apply_limit_offset(batches, query.limit, query.offset)?;
 	}
 
-	// 100% MotherDuck style output
 let js_output = flatten_batches_to_js(&batches)?;
 Ok(js_output)
 

@@ -1,4 +1,3 @@
-// MotherDuck style: Direct typed array access (no Arrow reconstruction needed)
 // Using flat column buffers for zero-copy performance
 import { toast } from 'sonner';
 import type { IGetMetaDataResponse, IColumnMeta } from '../types/metadata';
@@ -53,24 +52,19 @@ export interface DataQuery {
     options?: IAdditionalOptions;
 }
 
-// MotherDuck style column buffer (flat typed arrays)
-interface MotherDuckColumnBuffer {
+interface ArrowColumnBuffer {
     name: string;
     dataType: 'int32' | 'int64' | 'float64' | 'bool' | 'utf8' | 'date32' | 'date64';
     values: Int32Array | BigInt64Array | Float64Array | Uint8Array;
     offsets?: Int32Array; // Only for utf8
 }
 
-interface MotherDuckResponse {
-    columns: MotherDuckColumnBuffer[];
+interface ColumnBufferResponse {
+    columns: ArrowColumnBuffer[];
     rowCount: number;
 }
 
-/**
- * MotherDuck style: Direct access to typed arrays
- * Extract value from flat column buffer at given row index
- */
-function getMotherDuckValue(buffer: MotherDuckColumnBuffer, rowIndex: number): unknown {
+function getColumnValue(buffer: ArrowColumnBuffer, rowIndex: number): unknown {
     if (rowIndex < 0 || rowIndex >= buffer.values.length) return null;
 
     switch (buffer.dataType) {
@@ -123,7 +117,6 @@ function getMotherDuckValue(buffer: MotherDuckColumnBuffer, rowIndex: number): u
  * 4. Data retrieval with pivot/filter support
  * 5. Store integration for status updates
  *
- * 🚀 MotherDuck Style Architecture:
  * - Uses flat column buffers (typed arrays) instead of Arrow IPC
  * - Zero-copy data transfer from Rust to JavaScript
  * - Direct typed array access for cell values (no reconstruction)
@@ -139,8 +132,7 @@ class DataService {
     // Store metadata from Rust (not data!)
     private metadata: IGetMetaDataResponse | null = null;
 
-    // MotherDuck style: Flat columnar storage (zero-copy typed arrays)
-    private resultColumns: Map<string, MotherDuckColumnBuffer> = new Map();
+    private resultColumns: Map<string, ArrowColumnBuffer> = new Map();
     private resultSchema: { name: string; type: string }[] = [];
     private rowCount: number = 0;
 
@@ -302,18 +294,17 @@ class DataService {
                     throw new Error(response.message || 'Failed to get data');
                 }
 
-                const motherDuckResponse = response.data as MotherDuckResponse;
+                const ColumnBufferResponse = response.data as ColumnBufferResponse;
 
-                console.log('[DataService] ✨ MotherDuck Response:', motherDuckResponse);
+                console.log('[DataService] ✨Response:', ColumnBufferResponse);
 
                 const storeStart = performance.now();
 
-                // ⭐ MotherDuck: Direct typed array storage (zero-copy)
-                this.rowCount = motherDuckResponse.rowCount;
+                this.rowCount = ColumnBufferResponse.rowCount;
                 this.resultColumns.clear();
                 this.resultSchema = [];
 
-                for (const col of motherDuckResponse.columns) {
+                for (const col of ColumnBufferResponse.columns) {
                     // Store raw typed arrays directly (no reconstruction!)
                     this.resultColumns.set(col.name, col);
                     this.resultSchema.push({
@@ -325,7 +316,7 @@ class DataService {
                 const storeTime = performance.now() - storeStart;
                 const totalMainThread = performance.now() - mainThreadStart;
 
-                console.log(`[DataService] ✓ MotherDuck query complete`);
+                console.log(`[DataService] ✓ query complete`);
                 console.log(`  ├─ Rust WASM processing: ${response.timeTaken.toFixed(2)}ms`);
                 console.log(`  ├─ JS storage (zero-copy): ${storeTime.toFixed(2)}ms`);
                 console.log(`  └─ Total main thread: ${totalMainThread.toFixed(2)}ms`);
@@ -376,7 +367,6 @@ class DataService {
     }
 
     /**
-     * Get cell value by row and column (MotherDuck style: direct typed array access)
      */
     getCell(rowIndex: number, columnName: string): unknown {
         const buffer = this.resultColumns.get(columnName);
@@ -384,8 +374,7 @@ class DataService {
 
         if (rowIndex < 0 || rowIndex >= this.rowCount) return null;
 
-        // Direct access to typed array (zero-copy MotherDuck style)
-        return getMotherDuckValue(buffer, rowIndex);
+        return getColumnValue(buffer, rowIndex);
     }
 
     /**

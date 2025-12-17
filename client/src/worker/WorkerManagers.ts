@@ -135,13 +135,11 @@ const handleGetMetaData = async (): Promise<IResponse<string>> => {
 };
 
 const handleGetData = async (queryJson: string): Promise<IResponse<{ columns: unknown[]; rowCount: number }>> => {
-    // MotherDuck style: Returns { columns: [...flat buffers], rowCount: number }
     const result = await get_data_async(queryJson);
 
     // Convert ArrayBuffers to proper typed arrays for transfer
     if (result.success && result.data?.columns) {
         for (const col of result.data.columns) {
-            // Convert raw ArrayBuffers to typed arrays for MotherDuck style
             if (col.values instanceof ArrayBuffer) {
                 switch (col.dataType) {
                     case 'int32':
