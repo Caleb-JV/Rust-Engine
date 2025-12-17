@@ -1,17 +1,21 @@
 use arrow_array::{
     Array, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray,
     builder::BooleanBuilder,
+    Scalar,
 };
 use arrow_schema::DataType;
-use wasm_bindgen::JsValue;
 
 use arrow_ord::cmp;
 use arrow_arith::boolean as boolean_kernels;
 use arrow_select::filter::filter_record_batch;
 use arrow_string::like;
 
+use wasm_bindgen::JsValue;
+use std::collections::HashSet;
+
 use crate::utils::error::js_err;
 use crate::types::query_types::{FilterCondition, FilterOperator, FilterValue};
+
 
 
 /// Extension helpers for FilterValue so we don't repeat matches everywhere.
@@ -106,10 +110,10 @@ pub fn apply_filters(
         return Ok(batches);
     }
 
-    let mut filtered_batches = Vec::new();
+    let mut out = Vec::with_capacity(batches.len());
 
     for batch in batches {
-        let mut filter_mask: Option<BooleanArray> = None;
+        let mut mask: Option<BooleanArray> = None;
 
         for condition in filters {
             let col_index = batch
@@ -117,29 +121,39 @@ pub fn apply_filters(
                 .index_of(&condition.column)
                 .map_err(|_| js_err(&format!("Column not found: {}", condition.column)))?;
 
-            let array = batch.column(col_index);
-            let condition_mask = apply_filter_condition(array.as_ref(), condition)?;
+            let col = batch.column(col_index);
+            let next_mask = apply_filter_condition(col.as_ref(), condition)?;
 
-            filter_mask = Some(match filter_mask {
-                None => condition_mask,
-                Some(existing) => boolean_kernels::and(&existing, &condition_mask)
-                    .map_err(|e| js_err(&format!("Mask AND error: {}", e)))?,
+            mask = Some(match mask {
+                None => next_mask,
+                Some(prev) => {
+                    let combined = boolean_kernels::and(&prev, &next_mask)
+                        .map_err(|e| js_err(&e.to_string()))?;
+
+                    // 🚀 EARLY EXIT
+                    if combined.false_count() == combined.len() {
+                        // All false, no need to continue this batch
+                        mask = Some(combined);
+                        break;
+                    }
+
+                    combined
+                }
             });
         }
 
-        if let Some(mask) = filter_mask {
-            let filtered = filter_record_batch(&batch, &mask)
-                .map_err(|e| js_err(&format!("Filter error: {}", e)))?;
+        if let Some(m) = mask {
+            let filtered =
+                filter_record_batch(&batch, &m).map_err(|e| js_err(&e.to_string()))?;
 
             if filtered.num_rows() > 0 {
-                filtered_batches.push(filtered);
+                out.push(filtered);
             }
         }
     }
 
-    Ok(filtered_batches)
+    Ok(out)
 }
-
 
 /// Dispatch filter condition based on array datatype.
 fn apply_filter_condition(
@@ -151,50 +165,47 @@ fn apply_filter_condition(
             let arr = array
                 .as_any()
                 .downcast_ref::<StringArray>()
-                .ok_or_else(|| js_err("Failed to downcast to StringArray"))?;
-            apply_string_filter_kernel(arr, condition)
+                .ok_or_else(|| js_err("Downcast StringArray failed"))?;
+            apply_string_filter(arr, condition)
         }
         DataType::Int64 => {
             let arr = array
                 .as_any()
                 .downcast_ref::<Int64Array>()
-                .ok_or_else(|| js_err("Failed to downcast to Int64Array"))?;
-            apply_numeric_filter_i64_kernel(arr, condition)
+                .ok_or_else(|| js_err("Downcast Int64Array failed"))?;
+            apply_i64_filter(arr, condition)
         }
         DataType::Float64 => {
             let arr = array
                 .as_any()
                 .downcast_ref::<Float64Array>()
-                .ok_or_else(|| js_err("Failed to downcast to Float64Array"))?;
-            apply_numeric_filter_f64_kernel(arr, condition)
+                .ok_or_else(|| js_err("Downcast Float64Array failed"))?;
+            apply_f64_filter(arr, condition)
         }
         DataType::Boolean => {
             let arr = array
                 .as_any()
                 .downcast_ref::<BooleanArray>()
-                .ok_or_else(|| js_err("Failed to downcast to BooleanArray"))?;
+                .ok_or_else(|| js_err("Downcast BooleanArray failed"))?;
             apply_boolean_filter(arr, condition)
         }
-        dt => Err(js_err(&format!(
-            "Filtering not supported for type {:?}",
-            dt
-        ))),
+        dt => Err(js_err(&format!("Unsupported type {:?}", dt))),
     }
 }
 
-/// String filters using Arrow string + boolean kernels.
-fn apply_string_filter_kernel(
+/// String filters using Arrow string + boolean kernels with scalar comparisons.
+fn apply_string_filter(
     array: &StringArray,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
     match condition.operator {
         FilterOperator::Equals | FilterOperator::NotEquals => {
             let val = condition.value.as_str()?;
-            let rhs = StringArray::from(vec![val; array.len()]);
+            let scalar = Scalar::new(StringArray::from(vec![val]));
 
             let mask = match condition.operator {
-                FilterOperator::Equals => cmp::eq(array, &rhs),
-                FilterOperator::NotEquals => cmp::neq(array, &rhs),
+                FilterOperator::Equals => cmp::eq(&scalar, array),
+                FilterOperator::NotEquals => cmp::neq(&scalar, array),
                 _ => unreachable!(),
             }
             .map_err(|e| js_err(&format!("String cmp error: {}", e)))?;
@@ -204,6 +215,7 @@ fn apply_string_filter_kernel(
 
         FilterOperator::Contains | FilterOperator::NotContains => {
             let val = condition.value.as_str()?;
+            // Contains doesn't have scalar kernel, use array comparison
             let rhs = StringArray::from(vec![val; array.len()]);
 
             let matches = like::contains(array, &rhs)
@@ -226,26 +238,27 @@ fn apply_string_filter_kernel(
             let values = condition.value.as_array_str()?;
             if values.is_empty() {
                 // IN [] -> always false
-                let mut builder =
-                    BooleanBuilder::with_capacity(array.len());
+                let mut builder = BooleanBuilder::with_capacity(array.len());
+                for _ in 0..array.len() {
+                    builder.append_value(false);
+                }
                 return Ok(builder.finish());
             }
 
-            // OR-chain eq masks
-            let mut mask: Option<BooleanArray> = None;
-            for v in values {
-                let rhs = StringArray::from(vec![v.as_str(); array.len()]);
-                let eq = cmp::eq(array, &rhs)
-                    .map_err(|e| js_err(&format!("eq_utf8 error: {}", e)))?;
+            // Use HashSet for O(1) membership test
+            let set: HashSet<&str> = values.iter().map(|s| s.as_str()).collect();
+            let mut builder = BooleanBuilder::with_capacity(array.len());
 
-                mask = Some(match mask {
-                    None => eq,
-                    Some(prev) => boolean_kernels::or(&prev, &eq)
-                        .map_err(|e| js_err(&format!("OR error: {}", e)))?,
-                });
+            for i in 0..array.len() {
+                let matches = if array.is_null(i) {
+                    false
+                } else {
+                    set.contains(array.value(i))
+                };
+                builder.append_value(matches);
             }
 
-            let in_mask = mask.ok_or_else(|| js_err("IN with empty value list"))?;
+            let in_mask = builder.finish();
 
             if let FilterOperator::In = condition.operator {
                 Ok(in_mask)
@@ -260,13 +273,11 @@ fn apply_string_filter_kernel(
     }
 }
 
-/// Int64 filters using Arrow cmp + boolean kernels.
-fn apply_numeric_filter_i64_kernel(
+/// Int64 filters using Arrow cmp + boolean kernels with scalar comparisons.
+fn apply_i64_filter(
     array: &Int64Array,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
-    let len = array.len();
-
     let mask = match condition.operator {
         FilterOperator::Equals
         | FilterOperator::NotEquals
@@ -275,15 +286,15 @@ fn apply_numeric_filter_i64_kernel(
         | FilterOperator::GreaterThanOrEqual
         | FilterOperator::LessThanOrEqual => {
             let val = condition.value.as_i64()?;
-            let rhs = Int64Array::from(vec![val; len]);
+            let scalar = Scalar::new(Int64Array::from(vec![val]));
 
             let res = match condition.operator {
-                FilterOperator::Equals => cmp::eq(array, &rhs),
-                FilterOperator::NotEquals => cmp::neq(array, &rhs),
-                FilterOperator::GreaterThan => cmp::gt(array, &rhs),
-                FilterOperator::LessThan => cmp::lt(array, &rhs),
-                FilterOperator::GreaterThanOrEqual => cmp::gt_eq(array, &rhs),
-                FilterOperator::LessThanOrEqual => cmp::lt_eq(array, &rhs),
+                FilterOperator::Equals => cmp::eq(&scalar, array),
+                FilterOperator::NotEquals => cmp::neq(&scalar, array),
+                FilterOperator::GreaterThan => cmp::lt(&scalar, array),  // scalar < array means array > scalar
+                FilterOperator::LessThan => cmp::gt(&scalar, array),     // scalar > array means array < scalar
+                FilterOperator::GreaterThanOrEqual => cmp::lt_eq(&scalar, array),
+                FilterOperator::LessThanOrEqual => cmp::gt_eq(&scalar, array),
                 _ => unreachable!(),
             };
 
@@ -293,12 +304,14 @@ fn apply_numeric_filter_i64_kernel(
         FilterOperator::Between => {
             let (min_i64, max_i64) = condition.value.as_range_i64()?;
 
-            let min_arr = Int64Array::from(vec![min_i64; len]);
-            let max_arr = Int64Array::from(vec![max_i64; len]);
+            let min_scalar = Scalar::new(Int64Array::from(vec![min_i64]));
+            let max_scalar = Scalar::new(Int64Array::from(vec![max_i64]));
 
-            let ge = cmp::gt_eq(array, &min_arr)
+            // array >= min (min <= array)
+            let ge = cmp::lt_eq(&min_scalar, array)
                 .map_err(|e| js_err(&format!("Int64 >= error: {}", e)))?;
-            let le = cmp::lt_eq(array, &max_arr)
+            // array <= max (max >= array)
+            let le = cmp::gt_eq(&max_scalar, array)
                 .map_err(|e| js_err(&format!("Int64 <= error: {}", e)))?;
 
             boolean_kernels::and(&ge, &le)
@@ -311,13 +324,11 @@ fn apply_numeric_filter_i64_kernel(
     Ok(mask)
 }
 
-/// Float64 filters using Arrow cmp + boolean kernels.
-fn apply_numeric_filter_f64_kernel(
+/// Float64 filters using Arrow cmp + boolean kernels with scalar comparisons.
+fn apply_f64_filter(
     array: &Float64Array,
     condition: &FilterCondition,
 ) -> Result<BooleanArray, JsValue> {
-    let len = array.len();
-
     let mask = match condition.operator {
         FilterOperator::Equals
         | FilterOperator::NotEquals
@@ -326,15 +337,15 @@ fn apply_numeric_filter_f64_kernel(
         | FilterOperator::GreaterThanOrEqual
         | FilterOperator::LessThanOrEqual => {
             let val = condition.value.as_f64()?;
-            let rhs = Float64Array::from(vec![val; len]);
+            let scalar = Scalar::new(Float64Array::from(vec![val]));
 
             let res = match condition.operator {
-                FilterOperator::Equals => cmp::eq(array, &rhs),
-                FilterOperator::NotEquals => cmp::neq(array, &rhs),
-                FilterOperator::GreaterThan => cmp::gt(array, &rhs),
-                FilterOperator::LessThan => cmp::lt(array, &rhs),
-                FilterOperator::GreaterThanOrEqual => cmp::gt_eq(array, &rhs),
-                FilterOperator::LessThanOrEqual => cmp::lt_eq(array, &rhs),
+                FilterOperator::Equals => cmp::eq(&scalar, array),
+                FilterOperator::NotEquals => cmp::neq(&scalar, array),
+                FilterOperator::GreaterThan => cmp::lt(&scalar, array),  // scalar < array means array > scalar
+                FilterOperator::LessThan => cmp::gt(&scalar, array),     // scalar > array means array < scalar
+                FilterOperator::GreaterThanOrEqual => cmp::lt_eq(&scalar, array),
+                FilterOperator::LessThanOrEqual => cmp::gt_eq(&scalar, array),
                 _ => unreachable!(),
             };
 
@@ -344,12 +355,14 @@ fn apply_numeric_filter_f64_kernel(
         FilterOperator::Between => {
             let (min_f64, max_f64) = condition.value.as_range_f64()?;
 
-            let min_arr = Float64Array::from(vec![min_f64; len]);
-            let max_arr = Float64Array::from(vec![max_f64; len]);
+            let min_scalar = Scalar::new(Float64Array::from(vec![min_f64]));
+            let max_scalar = Scalar::new(Float64Array::from(vec![max_f64]));
 
-            let ge = cmp::gt_eq(array, &min_arr)
+            // array >= min (min <= array)
+            let ge = cmp::lt_eq(&min_scalar, array)
                 .map_err(|e| js_err(&format!("Float64 >= error: {}", e)))?;
-            let le = cmp::lt_eq(array, &max_arr)
+            // array <= max (max >= array)
+            let le = cmp::gt_eq(&max_scalar, array)
                 .map_err(|e| js_err(&format!("Float64 <= error: {}", e)))?;
 
             boolean_kernels::and(&ge, &le)

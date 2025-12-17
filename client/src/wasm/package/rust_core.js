@@ -177,9 +177,51 @@ function handleError(f, args) {
     }
 }
 
+let cachedInt32ArrayMemory0 = null;
+
+function getInt32ArrayMemory0() {
+    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
+        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32ArrayMemory0;
+}
+
+function getArrayI32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
+let cachedBigInt64ArrayMemory0 = null;
+
+function getBigInt64ArrayMemory0() {
+    if (cachedBigInt64ArrayMemory0 === null || cachedBigInt64ArrayMemory0.byteLength === 0) {
+        cachedBigInt64ArrayMemory0 = new BigInt64Array(wasm.memory.buffer);
+    }
+    return cachedBigInt64ArrayMemory0;
+}
+
+function getArrayI64FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getBigInt64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+
+let cachedFloat64ArrayMemory0 = null;
+
+function getFloat64ArrayMemory0() {
+    if (cachedFloat64ArrayMemory0 === null || cachedFloat64ArrayMemory0.byteLength === 0) {
+        cachedFloat64ArrayMemory0 = new Float64Array(wasm.memory.buffer);
+    }
+    return cachedFloat64ArrayMemory0;
+}
+
+function getArrayF64FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
 }
 
 const CLOSURE_DTORS = (typeof FinalizationRegistry === 'undefined')
@@ -212,6 +254,74 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     };
     CLOSURE_DTORS.register(real, state, state);
     return real;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+/**
+ * Async WASM export: seed data and return a structured response with timing
+ * @param {Uint8Array} bytes
+ * @returns {Promise<any>}
+ */
+export function seed_async(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Async version of get_data with a structured response envelope
+ * Returns { columns: [...], rowCount: number } instead of IPC bytes
+ * @param {string} query_json
+ * @returns {Promise<any>}
+ */
+export function get_data_async(query_json) {
+    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_data_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Async WASM export: get meta data with a structured response
+ * @returns {Promise<any>}
+ */
+export function get_meta_data_async() {
+    const ret = wasm.get_meta_data_async();
+    return ret;
+}
+
+/**
+ * Async version of get_filter_options with a structured response envelope
+ * @param {string} col_name
+ * @returns {Promise<any>}
+ */
+export function get_filter_options_async(col_name) {
+    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.get_filter_options_async(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Get all timing log entries
+ * @returns {any}
+ */
+export function get_timing_log() {
+    const ret = wasm.get_timing_log();
+    return ret;
+}
+
+/**
+ * Clear the timing log
+ */
+export function clear_timing_log() {
+    wasm.clear_timing_log();
 }
 
 function takeFromExternrefTable0(idx) {
@@ -251,86 +361,14 @@ export function generate_sample_data(row_count, seed) {
 }
 
 /**
- * Async version of get_data with a structured response envelope
- * Returns { columns: [...], rowCount: number } instead of IPC bytes
- * @param {string} query_json
- * @returns {Promise<any>}
- */
-export function get_data_async(query_json) {
-    const ptr0 = passStringToWasm0(query_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_data_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Async version of get_filter_options with a structured response envelope
- * @param {string} col_name
- * @returns {Promise<any>}
- */
-export function get_filter_options_async(col_name) {
-    const ptr0 = passStringToWasm0(col_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.get_filter_options_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Async WASM export: get meta data with a structured response
- * @returns {Promise<any>}
- */
-export function get_meta_data_async() {
-    const ret = wasm.get_meta_data_async();
-    return ret;
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-/**
- * Async WASM export: seed data and return a structured response with timing
- * @param {Uint8Array} bytes
- * @returns {Promise<any>}
- */
-export function seed_async(bytes) {
-    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.seed_async(ptr0, len0);
-    return ret;
-}
-
-/**
- * Get all timing log entries
- * @returns {any}
- */
-export function get_timing_log() {
-    const ret = wasm.get_timing_log();
-    return ret;
-}
-
-/**
- * Clear the timing log
- */
-export function clear_timing_log() {
-    wasm.clear_timing_log();
-}
-
-/**
  * ------------------------------------------------------------------
- *   STREAMING API: Initialize with CSV header to infer schema
+ *   Get current memory usage in bytes
  * ------------------------------------------------------------------
- * @param {Uint8Array} header_bytes
+ * @returns {number}
  */
-export function seed_start(header_bytes) {
-    const ptr0 = passArray8ToWasm0(header_bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.seed_start(ptr0, len0);
-    if (ret[1]) {
-        throw takeFromExternrefTable0(ret[0]);
-    }
+export function get_memory_usage() {
+    const ret = wasm.get_memory_usage();
+    return ret >>> 0;
 }
 
 /**
@@ -367,17 +405,6 @@ export function seed_chunk(chunk_bytes, has_header) {
 
 /**
  * ------------------------------------------------------------------
- *   Get current memory usage in bytes
- * ------------------------------------------------------------------
- * @returns {number}
- */
-export function get_memory_usage() {
-    const ret = wasm.get_memory_usage();
-    return ret >>> 0;
-}
-
-/**
- * ------------------------------------------------------------------
  *   STREAMING API: Finalize streaming (returns total row count)
  * ------------------------------------------------------------------
  * @returns {number}
@@ -390,12 +417,27 @@ export function seed_finalize() {
     return ret[0] >>> 0;
 }
 
-function wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456(arg0, arg1, arg2);
+/**
+ * ------------------------------------------------------------------
+ *   STREAMING API: Initialize with CSV header to infer schema
+ * ------------------------------------------------------------------
+ * @param {Uint8Array} header_bytes
+ */
+export function seed_start(header_bytes) {
+    const ptr0 = passArray8ToWasm0(header_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.seed_start(ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(arg0, arg1, arg2, arg3);
 }
 
 const EXPECTED_RESPONSE_TYPES = new Set(['basic', 'cors', 'default']);
@@ -465,10 +507,6 @@ function __wbg_get_imports() {
     imports.wbg.__wbg__wbg_cb_unref_2454a539ea5790d9 = function(arg0) {
         arg0._wbg_cb_unref();
     };
-    imports.wbg.__wbg_buffer_ccc4520b36d3ccf4 = function(arg0) {
-        const ret = arg0.buffer;
-        return ret;
-    };
     imports.wbg.__wbg_call_525440f72fbfc0ea = function() { return handleError(function (arg0, arg1, arg2) {
         const ret = arg0.call(arg1, arg2);
         return ret;
@@ -485,6 +523,22 @@ function __wbg_get_imports() {
             result = false;
         }
         const ret = result;
+        return ret;
+    };
+    imports.wbg.__wbg_length_40c759d395b54595 = function(arg0) {
+        const ret = arg0.length;
+        return ret;
+    };
+    imports.wbg.__wbg_length_69bca3cb64fc8748 = function(arg0) {
+        const ret = arg0.length;
+        return ret;
+    };
+    imports.wbg.__wbg_length_e70e9e6484b0952f = function(arg0) {
+        const ret = arg0.length;
+        return ret;
+    };
+    imports.wbg.__wbg_length_ef0f5319420e922a = function(arg0) {
+        const ret = arg0.length;
         return ret;
     };
     imports.wbg.__wbg_log_8cec76766b8c0e33 = function(arg0) {
@@ -505,7 +559,7 @@ function __wbg_get_imports() {
                 const a = state0.a;
                 state0.a = 0;
                 try {
-                    return wasm_bindgen__convert__closures_____invoke__h927080c8d2bb44ba(a, state0.b, arg0, arg1);
+                    return wasm_bindgen__convert__closures_____invoke__h3b0bb0f0824ea72c(a, state0.b, arg0, arg1);
                 } finally {
                     state0.a = a;
                 }
@@ -524,12 +578,24 @@ function __wbg_get_imports() {
         const ret = new Array();
         return ret;
     };
-    imports.wbg.__wbg_new_from_slice_92f4d78ca282a2d2 = function(arg0, arg1) {
-        const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
-        return ret;
-    };
     imports.wbg.__wbg_new_no_args_ee98eee5275000a4 = function(arg0, arg1) {
         const ret = new Function(getStringFromWasm0(arg0, arg1));
+        return ret;
+    };
+    imports.wbg.__wbg_new_with_length_01aa0dc35aa13543 = function(arg0) {
+        const ret = new Uint8Array(arg0 >>> 0);
+        return ret;
+    };
+    imports.wbg.__wbg_new_with_length_6f06f396d5077f7b = function(arg0) {
+        const ret = new BigInt64Array(arg0 >>> 0);
+        return ret;
+    };
+    imports.wbg.__wbg_new_with_length_b0bfefdb7afb8ab9 = function(arg0) {
+        const ret = new Int32Array(arg0 >>> 0);
+        return ret;
+    };
+    imports.wbg.__wbg_new_with_length_cd045ed0a87d4dd6 = function(arg0) {
+        const ret = new Float64Array(arg0 >>> 0);
         return ret;
     };
     imports.wbg.__wbg_now_793306c526e2e3b6 = function() {
@@ -559,6 +625,15 @@ function __wbg_get_imports() {
         const ret = Promise.resolve(arg0);
         return ret;
     };
+    imports.wbg.__wbg_set_8fa23c1f8b7e534d = function(arg0, arg1, arg2) {
+        arg0.set(getArrayI32FromWasm0(arg1, arg2));
+    };
+    imports.wbg.__wbg_set_9e6516df7b7d0f19 = function(arg0, arg1, arg2) {
+        arg0.set(getArrayU8FromWasm0(arg1, arg2));
+    };
+    imports.wbg.__wbg_set_b4de519780bcdc4c = function(arg0, arg1, arg2) {
+        arg0.set(getArrayI64FromWasm0(arg1, arg2));
+    };
     imports.wbg.__wbg_set_c213c871859d6500 = function(arg0, arg1, arg2) {
         arg0[arg1 >>> 0] = arg2;
     };
@@ -566,6 +641,9 @@ function __wbg_get_imports() {
         const ret = Reflect.set(arg0, arg1, arg2);
         return ret;
     }, arguments) };
+    imports.wbg.__wbg_set_f671887e6f4acb15 = function(arg0, arg1, arg2) {
+        arg0.set(getArrayF64FromWasm0(arg1, arg2));
+    };
     imports.wbg.__wbg_static_accessor_GLOBAL_89e1d9ac6a1b250e = function() {
         const ret = typeof global === 'undefined' ? null : global;
         return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -591,9 +669,9 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
-    imports.wbg.__wbindgen_cast_35422bf0483863ae = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 353, function: Function { arguments: [Externref], shim_idx: 354, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hefaf3f048dda7301, wasm_bindgen__convert__closures_____invoke__ha5d69b44cd93c456);
+    imports.wbg.__wbindgen_cast_59b580001be016a2 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 365, function: Function { arguments: [Externref], shim_idx: 366, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h56051a08f764ac79, wasm_bindgen__convert__closures_____invoke__h31f9d501116eaee8);
         return ret;
     };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {
@@ -618,7 +696,10 @@ function __wbg_get_imports() {
 function __wbg_finalize_init(instance, module) {
     wasm = instance.exports;
     __wbg_init.__wbindgen_wasm_module = module;
+    cachedBigInt64ArrayMemory0 = null;
     cachedDataViewMemory0 = null;
+    cachedFloat64ArrayMemory0 = null;
+    cachedInt32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
 
 

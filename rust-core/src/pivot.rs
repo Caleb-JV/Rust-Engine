@@ -1,4 +1,3 @@
-pub mod aggregation;
 pub mod grouping;
 
 use arrow_array::RecordBatch;
@@ -7,14 +6,13 @@ use wasm_bindgen::JsValue;
 use crate::utils::error::js_err;
 use crate::types::query_types::PivotSpec;
 
-use grouping::group_and_aggregate;
 
 /// Apply pivot/grouping to record batches.
 /// This is the public entrypoint used by lib.rs and elsewhere.
 pub fn apply_pivot(
     batches: Vec<RecordBatch>,
     pivot_spec: &PivotSpec,
-    show_subtotal: bool,
+    _show_subtotal: bool,
 ) -> Result<Vec<RecordBatch>, JsValue> {
     if batches.is_empty() {
         return Ok(batches);
@@ -29,6 +27,6 @@ pub fn apply_pivot(
         batches[0].clone()
     };
 
-    let result = group_and_aggregate(&combined, pivot_spec, show_subtotal)?;
+    let result = grouping::group_and_aggregate(&combined, pivot_spec)?;
     Ok(vec![result])
 }

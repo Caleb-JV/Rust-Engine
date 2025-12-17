@@ -59,7 +59,7 @@ function getTimings(): string[] {
  * Ensures CSV rows are complete and properly handles headers
  */
 async function streamFileToWasm(file: File, onProgress?: (progress: IProcessFileProgress) => void): Promise<number> {
-    const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 1MB chunks
     const totalSize = file.size;
     let offset = 0;
     let lineBuffer = '';
@@ -135,8 +135,39 @@ const handleGetMetaData = async (): Promise<IResponse<string>> => {
 };
 
 const handleGetData = async (queryJson: string): Promise<IResponse<{ columns: unknown[]; rowCount: number }>> => {
-    // Returns { columns: ArrowColumnBuffer[], rowCount: number }
-    return (await get_data_async(queryJson)) as IResponse<{ columns: unknown[]; rowCount: number }>;
+    const result = await get_data_async(queryJson);
+
+    // Convert ArrayBuffers to proper typed arrays for transfer
+    if (result.success && result.data?.columns) {
+        for (const col of result.data.columns) {
+            if (col.values instanceof ArrayBuffer) {
+                switch (col.dataType) {
+                    case 'int32':
+                    case 'date32':
+                        col.values = new Int32Array(col.values);
+                        break;
+                    case 'int64':
+                    case 'date64':
+                        col.values = new BigInt64Array(col.values);
+                        break;
+                    case 'float64':
+                        col.values = new Float64Array(col.values);
+                        break;
+                    case 'bool':
+                    case 'utf8':
+                        col.values = new Uint8Array(col.values);
+                        break;
+                }
+            }
+
+            // Convert offsets ArrayBuffer to Int32Array for utf8
+            if (col.offsets instanceof ArrayBuffer) {
+                col.offsets = new Int32Array(col.offsets);
+            }
+        }
+    }
+
+    return result as IResponse<{ columns: unknown[]; rowCount: number }>;
 };
 
 const handleGetFilterOptions = async (column: string): Promise<IResponse<string>> => {
